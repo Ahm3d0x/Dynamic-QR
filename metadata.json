@@ -1,0 +1,10 @@
+{
+  "name": "QRDynamic",
+  "description": "Dynamic QR Code & Smart Link Management SaaS Platform with real-time redirect engine, 6 dynamic content types, print studio, scanner, and role-based quota management.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

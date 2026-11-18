@@ -1,0 +1,270 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global safety net: deny all by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Primitive Helpers
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isBootstrappedSuperAdmin() {
+      return isSignedIn() && request.auth.token.email == 'ah2005211@gmail.com';
+    }
+
+    function isSuperAdmin() {
+      return isBootstrappedSuperAdmin() || (
+        isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SUPER_ADMIN' &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'ACTIVE'
+      );
+    }
+
+    // Validation Blueprint: User
+    function isValidUser(data) {
+      return data.keys().hasAll([
+        'uid', 'name', 'email', 'role', 'status', 'plan',
+        'maxBarcodes', 'maxScansPerBarcode', 'allowDirectRedirect',
+        'allowWhiteLabel', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'uid', 'name', 'email', 'role', 'status', 'plan',
+        'maxBarcodes', 'maxScansPerBarcode', 'allowDirectRedirect',
+        'allowWhiteLabel', 'createdAt', 'updatedAt'
+      ]) &&
+      data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 && data.uid.matches('^[a-zA-Z0-9_\\-]+$') &&
+      data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
+      data.email is string && data.email.size() >= 3 && data.email.size() <= 200 &&
+      data.role is string && data.role.size() <= 20 && (data.role == 'ADMIN' || data.role == 'SUPER_ADMIN') &&
+      data.status is string && data.status.size() <= 20 && (data.status == 'ACTIVE' || data.status == 'SUSPENDED') &&
+      data.plan is string && data.plan.size() <= 20 && (data.plan == 'FREE' || data.plan == 'PRO' || data.plan == 'ENTERPRISE' || data.plan == 'CUSTOM') &&
+      data.maxBarcodes is number && data.maxBarcodes >= 0 && data.maxBarcodes <= 1000000 &&
+      data.maxScansPerBarcode is number && data.maxScansPerBarcode >= 0 && data.maxScansPerBarcode <= 100000000 &&
+      data.allowDirectRedirect is bool &&
+      data.allowWhiteLabel is bool &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    // Validation Blueprint: Barcode
+    function isValidBarcode(data) {
+      return data.keys().hasAll([
+        'shortCode', 'ownerId', 'ownerEmail', 'ownerStatus', 'title',
+        'type', 'destination', 'redirectMode', 'welcomeMessage', 'ctaText',
+        'qrColor', 'hideBranding', 'codeActive', 'isDeleted',
+        'scanCount', 'maxScansLimit', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'shortCode', 'ownerId', 'ownerEmail', 'ownerStatus', 'title',
+        'type', 'destination', 'redirectMode', 'welcomeMessage', 'ctaText',
+        'qrColor', 'hideBranding', 'codeActive', 'isDeleted',
+        'scanCount', 'maxScansLimit', 'createdAt', 'updatedAt'
+      ]) &&
+      data.shortCode is string && data.shortCode.size() >= 4 && data.shortCode.size() <= 32 && data.shortCode.matches('^[a-zA-Z0-9_\\-]+$') &&
+      data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 && data.ownerId.matches('^[a-zA-Z0-9_\\-]+$') &&
+      data.ownerEmail is string && data.ownerEmail.size() >= 3 && data.ownerEmail.size() <= 200 &&
+      data.ownerStatus is string && data.ownerStatus.size() <= 20 && (data.ownerStatus == 'ACTIVE' || data.ownerStatus == 'SUSPENDED') &&
+      data.title is string && data.title.size() >= 1 && data.title.size() <= 120 &&
+      data.type is string && data.type.size() <= 20 && (
+        data.type == 'URL' || data.type == 'TEXT' || data.type == 'IMAGE' ||
+        data.type == 'VCARD' || data.type == 'WIFI' || data.type == 'GEO_EVENT'
+      ) &&
+      data.destination is string && data.destination.size() >= 1 && data.destination.size() <= 2000 &&
+      data.redirectMode is string && data.redirectMode.size() <= 20 && (data.redirectMode == 'DIRECT' || data.redirectMode == 'LANDING') &&
+      data.welcomeMessage is string && data.welcomeMessage.size() <= 300 &&
+      data.ctaText is string && data.ctaText.size() <= 80 &&
+      data.qrColor is string && data.qrColor.size() >= 4 && data.qrColor.size() <= 20 &&
+      data.hideBranding is bool &&
+      data.codeActive is bool &&
+      data.isDeleted is bool &&
+      data.scanCount is number && data.scanCount >= 0 &&
+      data.maxScansLimit is number && data.maxScansLimit >= 1 &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    // Validation Blueprint: ScanLog
+    function isValidScanLog(data) {
+      return data.keys().hasAll([
+        'barcodeId', 'ownerId', 'title', 'deviceInfo', 'timestamp'
+      ]) &&
+      data.keys().hasOnly([
+        'barcodeId', 'ownerId', 'title', 'deviceInfo', 'timestamp'
+      ]) &&
+      data.barcodeId is string && data.barcodeId.size() >= 4 && data.barcodeId.size() <= 32 && data.barcodeId.matches('^[a-zA-Z0-9_\\-]+$') &&
+      data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 && data.ownerId.matches('^[a-zA-Z0-9_\\-]+$') &&
+      data.title is string && data.title.size() >= 1 && data.title.size() <= 120 &&
+      data.deviceInfo is string && data.deviceInfo.size() >= 1 && data.deviceInfo.size() <= 200 &&
+      data.timestamp is timestamp;
+    }
+
+    // Validation Blueprint: PlatformSetting
+    function isValidPlatformSetting(data) {
+      return data.keys().hasAll(['platformName', 'maintenanceMode', 'updatedAt']) &&
+      data.keys().hasOnly(['platformName', 'maintenanceMode', 'updatedAt']) &&
+      data.platformName is string && data.platformName.size() >= 1 && data.platformName.size() <= 80 &&
+      data.maintenanceMode is bool &&
+      data.updatedAt is timestamp;
+    }
+
+    // Collection: users
+    match /users/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isSuperAdmin());
+      allow list: if isOwner(resource.data.uid) || isSuperAdmin();
+
+      allow create: if isOwner(userId) &&
+        isValidId(userId) &&
+        isValidUser(incoming()) &&
+        incoming().uid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        incoming().status == 'ACTIVE' && (
+          (
+            !isBootstrappedSuperAdmin() &&
+            incoming().role == 'ADMIN' &&
+            incoming().plan == 'FREE' &&
+            incoming().maxBarcodes == 5 &&
+            incoming().maxScansPerBarcode == 500 &&
+            incoming().allowDirectRedirect == false &&
+            incoming().allowWhiteLabel == false
+          ) ||
+          (
+            isBootstrappedSuperAdmin() &&
+            incoming().role == 'SUPER_ADMIN'
+          )
+        );
+
+      allow update: if isSignedIn() &&
+        isValidId(userId) &&
+        isValidUser(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().email == existing().email &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          // Action 1: Owner updates display name only
+          (
+            isOwner(userId) &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['name', 'updatedAt'])
+          ) ||
+          // Action 2: Super Admin updates plan, quotas, role, and account status
+          (
+            isSuperAdmin() &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'name', 'role', 'status', 'plan', 'maxBarcodes',
+              'maxScansPerBarcode', 'allowDirectRedirect', 'allowWhiteLabel', 'updatedAt'
+            ])
+          )
+        );
+
+      allow delete: if isValidId(userId) && isSuperAdmin();
+    }
+
+    // Collection: barcodes
+    match /barcodes/{barcodeId} {
+      // Single QR code lookup by shortCode is public so the Smart Redirect Engine works for any visitor scanning a code
+      allow get: if isValidId(barcodeId);
+      // Listing barcodes is strictly isolated to the owner or Super Admin
+      allow list: if (isSignedIn() && resource.data.ownerId == request.auth.uid) || isSuperAdmin();
+
+      allow create: if isSignedIn() &&
+        isValidId(barcodeId) &&
+        isValidBarcode(incoming()) &&
+        incoming().shortCode == barcodeId &&
+        incoming().ownerId == request.auth.uid &&
+        incoming().scanCount == 0 &&
+        incoming().isDeleted == false &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'ACTIVE';
+
+      allow update: if isValidId(barcodeId) &&
+        isValidBarcode(incoming()) &&
+        incoming().shortCode == existing().shortCode &&
+        incoming().ownerId == existing().ownerId &&
+        incoming().ownerEmail == existing().ownerEmail &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          // Action 1: Owner edits QR destination, design, active state, or soft-delete
+          (
+            isOwner(existing().ownerId) &&
+            incoming().scanCount == existing().scanCount &&
+            incoming().maxScansLimit == existing().maxScansLimit &&
+            incoming().ownerStatus == existing().ownerStatus &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'title', 'type', 'destination', 'redirectMode',
+              'welcomeMessage', 'ctaText', 'qrColor', 'hideBranding',
+              'codeActive', 'isDeleted', 'updatedAt'
+            ])
+          ) ||
+          // Action 2: Atomic Visitor Scan Registration (increments scanCount by +1 within maxScansLimit)
+          (
+            existing().codeActive == true &&
+            existing().isDeleted == false &&
+            existing().ownerStatus == 'ACTIVE' &&
+            incoming().scanCount == existing().scanCount + 1 &&
+            incoming().scanCount <= existing().maxScansLimit &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['scanCount', 'updatedAt'])
+          ) ||
+          // Action 3: Super Admin manages barcode state, ownerStatus sync, or quota limits
+          (
+            isSuperAdmin() &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'title', 'type', 'destination', 'redirectMode',
+              'welcomeMessage', 'ctaText', 'qrColor', 'hideBranding',
+              'codeActive', 'isDeleted', 'ownerStatus', 'maxScansLimit', 'updatedAt'
+            ])
+          )
+        );
+
+      allow delete: if isValidId(barcodeId) && isSuperAdmin();
+    }
+
+    // Collection: scanLogs
+    match /scanLogs/{scanId} {
+      allow get: if isValidId(scanId) && ((isSignedIn() && resource.data.ownerId == request.auth.uid) || isSuperAdmin());
+      allow list: if (isSignedIn() && resource.data.ownerId == request.auth.uid) || isSuperAdmin();
+
+      // Visitors can record a scan log when scanning a valid active barcode
+      allow create: if isValidId(scanId) &&
+        isValidScanLog(incoming()) &&
+        incoming().timestamp == request.time &&
+        exists(/databases/$(database)/documents/barcodes/$(incoming().barcodeId));
+
+      allow update, delete: if false;
+    }
+
+    // Collection: platformSettings
+    match /platformSettings/{settingId} {
+      allow get: if isValidId(settingId);
+      allow list: if isSuperAdmin();
+      allow create, update: if isValidId(settingId) &&
+        isValidPlatformSetting(incoming()) &&
+        incoming().updatedAt == request.time &&
+        isSuperAdmin();
+      allow delete: if false;
+    }
+  }
+}

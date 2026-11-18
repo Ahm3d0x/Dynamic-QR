@@ -1,0 +1,250 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Platform user account with role, subscription plan, and usage limits.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 200
+        },
+        "role": {
+          "type": "string",
+          "enum": ["ADMIN", "SUPER_ADMIN"],
+          "maxLength": 20
+        },
+        "status": {
+          "type": "string",
+          "enum": ["ACTIVE", "SUSPENDED"],
+          "maxLength": 20
+        },
+        "plan": {
+          "type": "string",
+          "enum": ["FREE", "PRO", "ENTERPRISE", "CUSTOM"],
+          "maxLength": 20
+        },
+        "maxBarcodes": {
+          "type": "number"
+        },
+        "maxScansPerBarcode": {
+          "type": "number"
+        },
+        "allowDirectRedirect": {
+          "type": "boolean"
+        },
+        "allowWhiteLabel": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "uid",
+        "name",
+        "email",
+        "role",
+        "status",
+        "plan",
+        "maxBarcodes",
+        "maxScansPerBarcode",
+        "allowDirectRedirect",
+        "allowWhiteLabel",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Barcode": {
+      "title": "Barcode",
+      "description": "Dynamic QR code record separating static printed shortCode from dynamic destination.",
+      "type": "object",
+      "properties": {
+        "shortCode": {
+          "type": "string",
+          "maxLength": 32,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerEmail": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "ownerStatus": {
+          "type": "string",
+          "enum": ["ACTIVE", "SUSPENDED"],
+          "maxLength": 20
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "type": {
+          "type": "string",
+          "enum": ["URL", "TEXT", "IMAGE", "VCARD", "WIFI", "GEO_EVENT"],
+          "maxLength": 20
+        },
+        "destination": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "redirectMode": {
+          "type": "string",
+          "enum": ["DIRECT", "LANDING"],
+          "maxLength": 20
+        },
+        "welcomeMessage": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "ctaText": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "qrColor": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "hideBranding": {
+          "type": "boolean"
+        },
+        "codeActive": {
+          "type": "boolean"
+        },
+        "isDeleted": {
+          "type": "boolean"
+        },
+        "scanCount": {
+          "type": "number"
+        },
+        "maxScansLimit": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "shortCode",
+        "ownerId",
+        "ownerEmail",
+        "ownerStatus",
+        "title",
+        "type",
+        "destination",
+        "redirectMode",
+        "welcomeMessage",
+        "ctaText",
+        "qrColor",
+        "hideBranding",
+        "codeActive",
+        "isDeleted",
+        "scanCount",
+        "maxScansLimit",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ScanLog": {
+      "title": "ScanLog",
+      "description": "Individual scan event log for analytics without bloating the Barcode document.",
+      "type": "object",
+      "properties": {
+        "barcodeId": {
+          "type": "string",
+          "maxLength": 32,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "deviceInfo": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "barcodeId",
+        "ownerId",
+        "title",
+        "deviceInfo",
+        "timestamp"
+      ]
+    },
+    "PlatformSetting": {
+      "title": "PlatformSetting",
+      "description": "Global platform configuration.",
+      "type": "object",
+      "properties": {
+        "platformName": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "maintenanceMode": {
+          "type": "boolean"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "platformName",
+        "maintenanceMode",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles containing plan quotas and account status."
+    },
+    "/barcodes/{barcodeId}": {
+      "schema": { "$ref": "#/entities/Barcode" },
+      "description": "Dynamic QR codes indexed by shortCode."
+    },
+    "/scanLogs/{scanId}": {
+      "schema": { "$ref": "#/entities/ScanLog" },
+      "description": "Individual scan logs created when visitors scan a QR code."
+    },
+    "/platformSettings/{settingId}": {
+      "schema": { "$ref": "#/entities/PlatformSetting" },
+      "description": "Platform settings managed by Super Admins."
+    }
+  }
+}

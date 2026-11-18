@@ -1,0 +1,788 @@
+import React, { useMemo, useState } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
+import {
+  Activity,
+  Camera,
+  CheckCircle2,
+  Crown,
+  Edit3,
+  ExternalLink,
+  History,
+  LayoutDashboard,
+  LogOut,
+  Plus,
+  Printer,
+  QrCode,
+  RotateCcw,
+  Search,
+  Settings,
+  Shield,
+  Trash2,
+  TrendingUp,
+} from 'lucide-react';
+import { BarcodeRecord, ContentType, ScanLogRecord, UserProfile } from '../types/qr';
+import { buildShortLinkUrl, canUserCreateBarcode } from '../utils/qrLogic';
+
+interface AdminDashboardViewProps {
+  user: UserProfile;
+  barcodes: BarcodeRecord[];
+  scanLogs: ScanLogRecord[];
+  onOpenCreateModal: () => void;
+  onOpenEditModal: (barcode: BarcodeRecord) => void;
+  onOpenPrintModal: (barcode: BarcodeRecord) => void;
+  onOpenScanner: () => void;
+  onToggleBarcodeActive: (barcode: BarcodeRecord) => Promise<void>;
+  onSoftDeleteBarcode: (barcode: BarcodeRecord) => Promise<void>;
+  onRestoreBarcode: (barcode: BarcodeRecord) => Promise<void>;
+  onSimulateScan: (shortCode: string) => void;
+  onSwitchToSuperAdmin?: () => void;
+  onUpdateDisplayName: (newName: string) => Promise<void>;
+  onSignOut: () => void;
+}
+
+const SIX_MONTH_SERIES = [
+  { month: 'Oct', scans: 420 },
+  { month: 'Nov', scans: 680 },
+  { month: 'Dec', scans: 610 },
+  { month: 'Jan', scans: 890 },
+  { month: 'Feb', scans: 1120 },
+  { month: 'Mar', scans: 1450 },
+];
+
+export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
+  user,
+  barcodes,
+  scanLogs,
+  onOpenCreateModal,
+  onOpenEditModal,
+  onOpenPrintModal,
+  onOpenScanner,
+  onToggleBarcodeActive,
+  onSoftDeleteBarcode,
+  onRestoreBarcode,
+  onSimulateScan,
+  onSwitchToSuperAdmin,
+  onUpdateDisplayName,
+  onSignOut,
+}) => {
+  const [activeNav, setActiveNav] = useState<'DASHBOARD' | 'CODES' | 'LOGS' | 'SETTINGS'>(
+    'DASHBOARD'
+  );
+  const [searchQuery, setSearchQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState<'ALL' | ContentType>('ALL');
+  const [showDeleted, setShowDeleted] = useState(false);
+  const [profileName, setProfileName] = useState(user.name);
+  const [profileSaved, setProfileSaved] = useState(false);
+
+  const userBarcodes = useMemo(
+    () => barcodes.filter((b) => b.ownerId === user.uid),
+    [barcodes, user.uid]
+  );
+
+  const activeUserBarcodes = useMemo(
+    () => userBarcodes.filter((b) => !b.isDeleted),
+    [userBarcodes]
+  );
+
+  const deletedUserBarcodes = useMemo(
+    () => userBarcodes.filter((b) => b.isDeleted),
+    [userBarcodes]
+  );
+
+  const totalScans = useMemo(
+    () => activeUserBarcodes.reduce((acc, b) => acc + b.scanCount, 0),
+    [activeUserBarcodes]
+  );
+
+  const thisMonthScans = useMemo(() => Math.round(totalScans * 0.18) || 208, [totalScans]);
+
+  const filteredBarcodes = useMemo(() => {
+    const source = showDeleted ? deletedUserBarcodes : activeUserBarcodes;
+    return source.filter((b) => {
+      const matchesType = typeFilter === 'ALL' || b.type === typeFilter;
+      const q = searchQuery.trim().toLowerCase();
+      const matchesQuery =
+        !q ||
+        b.title.toLowerCase().includes(q) ||
+        b.shortCode.toLowerCase().includes(q) ||
+        b.destination.toLowerCase().includes(q);
+      return matchesType && matchesQuery;
+    });
+  }, [activeUserBarcodes, deletedUserBarcodes, showDeleted, typeFilter, searchQuery]);
+
+  const quotaCheck = canUserCreateBarcode(user, activeUserBarcodes.length);
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profileName.trim()) return;
+    await onUpdateDisplayName(profileName.trim());
+    setProfileSaved(true);
+    setTimeout(() => setProfileSaved(false), 2500);
+  };
+
+  return (
+    <div className="min-h-screen bg-[#F8F5EF] text-[#292824] flex flex-col lg:flex-row">
+      {/* Dark Forest Green Sidebar (#233229) matching Image 2 top-right */}
+      <aside className="w-full lg:w-64 bg-[#233229] text-white flex flex-col justify-between shrink-0 border-b lg:border-b-0 lg:border-r border-white/10">
+        <div>
+          <div className="p-6 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-[#D97745] text-white flex items-center justify-center">
+                <QrCode className="w-5 h-5" />
+              </div>
+              <span className="text-lg font-bold tracking-tight">
+                QR<span className="text-[#D97745]">Dynamic</span>
+              </span>
+            </div>
+
+            {onSwitchToSuperAdmin && (
+              <button
+                type="button"
+                onClick={onSwitchToSuperAdmin}
+                className="lg:hidden px-2.5 py-1 bg-[#D97745] text-white text-xs font-bold rounded-lg cursor-pointer"
+              >
+                Super Admin
+              </button>
+            )}
+          </div>
+
+          <nav className="px-3 pb-4 lg:space-y-1 flex lg:flex-col gap-1 overflow-x-auto">
+            <button
+              type="button"
+              onClick={() => setActiveNav('DASHBOARD')}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-colors cursor-pointer whitespace-nowrap ${
+                activeNav === 'DASHBOARD'
+                  ? 'bg-[#D97745] text-white'
+                  : 'text-[#E6E0D6] hover:bg-white/10'
+              }`}
+            >
+              <LayoutDashboard className="w-4 h-4 shrink-0" />
+              <span>Dashboard</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveNav('CODES')}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-colors cursor-pointer whitespace-nowrap ${
+                activeNav === 'CODES'
+                  ? 'bg-[#D97745] text-white'
+                  : 'text-[#E6E0D6] hover:bg-white/10'
+              }`}
+            >
+              <QrCode className="w-4 h-4 shrink-0" />
+              <span>My QR Codes ({activeUserBarcodes.length})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onOpenCreateModal}
+              disabled={!quotaCheck.allowed}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-[#E6E0D6] hover:bg-white/10 transition-colors cursor-pointer whitespace-nowrap disabled:opacity-40"
+            >
+              <Plus className="w-4 h-4 shrink-0 text-[#D97745]" />
+              <span>Create QR</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveNav('LOGS')}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-colors cursor-pointer whitespace-nowrap ${
+                activeNav === 'LOGS'
+                  ? 'bg-[#D97745] text-white'
+                  : 'text-[#E6E0D6] hover:bg-white/10'
+              }`}
+            >
+              <History className="w-4 h-4 shrink-0" />
+              <span>Scan Logs</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveNav('SETTINGS')}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-colors cursor-pointer whitespace-nowrap ${
+                activeNav === 'SETTINGS'
+                  ? 'bg-[#D97745] text-white'
+                  : 'text-[#E6E0D6] hover:bg-white/10'
+              }`}
+            >
+              <Settings className="w-4 h-4 shrink-0" />
+              <span>Settings</span>
+            </button>
+          </nav>
+        </div>
+
+        {/* Bottom Plan Upgrade & Role Switcher Card */}
+        <div className="hidden lg:block p-4 space-y-3">
+          <div className="bg-white/10 rounded-2xl p-4 text-center">
+            <Crown className="w-6 h-6 text-[#D97745] mx-auto mb-1.5" />
+            <span className="text-xs font-bold block">{user.plan} Plan Active</span>
+            <span className="text-[11px] text-[#E6E0D6] block mt-0.5 tabular-nums">
+              {activeUserBarcodes.length} / {user.maxBarcodes} codes used
+            </span>
+          </div>
+
+          {onSwitchToSuperAdmin && (
+            <button
+              type="button"
+              onClick={onSwitchToSuperAdmin}
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-3 bg-[#D97745]/20 hover:bg-[#D97745] text-[#D97745] hover:text-white border border-[#D97745]/40 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+            >
+              <Shield className="w-3.5 h-3.5" />
+              <span>Super Admin Panel</span>
+            </button>
+          )}
+        </div>
+      </aside>
+
+      {/* Main Workspace Area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Top Header */}
+        <header className="bg-white border-b border-[#E6E0D6] px-6 py-4 flex items-center justify-between gap-4">
+          <div>
+            <h1 className="text-xl font-bold text-[#292824]">
+              Hello, {user.name.split(' ')[0]}!
+            </h1>
+            <p className="text-xs text-[#6E6A63]">
+              Here is your dynamic QR overview · Account Status:{' '}
+              <strong className="text-[#292824]">{user.status}</strong>
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={onOpenScanner}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-[#F8F5EF] hover:bg-[#EFECE6] text-[#292824] border border-[#E6E0D6] text-xs font-bold rounded-xl transition-colors cursor-pointer whitespace-nowrap"
+            >
+              <Camera className="w-3.5 h-3.5 text-[#D97745]" />
+              <span className="hidden sm:inline">Scanner</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onOpenCreateModal}
+              disabled={!quotaCheck.allowed}
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-[#D97745] hover:bg-[#c56737] text-white text-xs font-bold rounded-xl transition-colors cursor-pointer whitespace-nowrap disabled:opacity-50"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Create QR</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onSignOut}
+              aria-label="Sign out to home"
+              className="p-2.5 bg-[#F8F5EF] hover:bg-[#EFECE6] text-[#6E6A63] hover:text-[#292824] border border-[#E6E0D6] rounded-xl transition-colors cursor-pointer"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        </header>
+
+        {/* Quota Warning Banner if limit reached or suspended */}
+        {!quotaCheck.allowed && (
+          <div className="mx-6 mt-4 p-3.5 bg-[#FDF2EC] border border-[#D97745] rounded-2xl text-xs font-semibold text-[#292824] flex items-center justify-between">
+            <span>{quotaCheck.reason}</span>
+            {onSwitchToSuperAdmin && (
+              <button
+                type="button"
+                onClick={onSwitchToSuperAdmin}
+                className="text-[#D97745] font-bold underline cursor-pointer"
+              >
+                Adjust Quota in Super Admin
+              </button>
+            )}
+          </div>
+        )}
+
+        <main className="p-6 space-y-6 max-w-7xl w-full mx-auto">
+          {/* 4 KPI Stat Cards matching Image 2 top-right */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white border border-[#E6E0D6] rounded-2xl p-5">
+              <div className="w-9 h-9 rounded-xl bg-[#FDF2EC] text-[#D97745] flex items-center justify-center mb-3">
+                <QrCode className="w-5 h-5" />
+              </div>
+              <div className="text-2xl font-bold text-[#292824] font-mono tabular-nums">
+                {activeUserBarcodes.length}{' '}
+                <span className="text-xs font-normal text-[#6E6A63]">/ {user.maxBarcodes}</span>
+              </div>
+              <div className="text-xs text-[#6E6A63] mt-0.5">Total Codes</div>
+            </div>
+
+            <div className="bg-white border border-[#E6E0D6] rounded-2xl p-5">
+              <div className="w-9 h-9 rounded-xl bg-[#DCE9DD] text-[#2E6B3E] flex items-center justify-center mb-3">
+                <Activity className="w-5 h-5" />
+              </div>
+              <div className="text-2xl font-bold text-[#292824] font-mono tabular-nums">
+                {totalScans.toLocaleString()}
+              </div>
+              <div className="text-xs text-[#6E6A63] mt-0.5">Total Scans</div>
+            </div>
+
+            <div className="bg-white border border-[#E6E0D6] rounded-2xl p-5">
+              <div className="w-9 h-9 rounded-xl bg-[#EFECE6] text-[#292824] flex items-center justify-center mb-3">
+                <TrendingUp className="w-5 h-5" />
+              </div>
+              <div className="text-2xl font-bold text-[#292824] font-mono tabular-nums">
+                ~ {thisMonthScans.toLocaleString()}
+              </div>
+              <div className="text-xs text-[#6E6A63] mt-0.5">This Month</div>
+            </div>
+
+            <div className="bg-white border border-[#E6E0D6] rounded-2xl p-5">
+              <div className="w-9 h-9 rounded-xl bg-[#DCE9DD] text-[#2E6B3E] flex items-center justify-center mb-3">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+              <div className="text-2xl font-bold text-[#292824]">{user.plan}</div>
+              <div className="text-xs text-[#6E6A63] mt-0.5">
+                Max {user.maxScansPerBarcode.toLocaleString()} scans/code
+              </div>
+            </div>
+          </div>
+
+          {activeNav === 'DASHBOARD' && (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Scan Statistics SVG Area Chart */}
+              <div className="lg:col-span-8 bg-white border border-[#E6E0D6] rounded-2xl p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="text-base font-bold text-[#292824]">Scan Statistics</h2>
+                    <p className="text-xs text-[#6E6A63]">
+                      Monthly dynamic redirection volume across your active campaigns
+                    </p>
+                  </div>
+                  <span className="text-xs font-semibold text-[#6E6A63]">Last 6 Months</span>
+                </div>
+
+                <div className="h-44 w-full pt-4">
+                  <svg viewBox="0 0 600 160" className="w-full h-full overflow-visible">
+                    <defs>
+                      <linearGradient id="scanAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#D97745" stopOpacity="0.28" />
+                        <stop offset="100%" stopColor="#D97745" stopOpacity="0.0" />
+                      </linearGradient>
+                    </defs>
+                    {[30, 75, 120].map((y) => (
+                      <line
+                        key={y}
+                        x1="0"
+                        y1={y}
+                        x2="600"
+                        y2={y}
+                        stroke="#EFECE6"
+                        strokeDasharray="4 4"
+                      />
+                    ))}
+                    <path
+                      d="M 20 115 L 130 85 L 240 92 L 350 62 L 460 44 L 580 22 L 580 140 L 20 140 Z"
+                      fill="url(#scanAreaGrad)"
+                    />
+                    <path
+                      d="M 20 115 L 130 85 L 240 92 L 350 62 L 460 44 L 580 22"
+                      fill="none"
+                      stroke="#D97745"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                    />
+                    {[
+                      { x: 20, y: 115, label: 'Oct' },
+                      { x: 130, y: 85, label: 'Nov' },
+                      { x: 240, y: 92, label: 'Dec' },
+                      { x: 350, y: 62, label: 'Jan' },
+                      { x: 460, y: 44, label: 'Feb' },
+                      { x: 580, y: 22, label: 'Mar' },
+                    ].map((pt) => (
+                      <g key={pt.label}>
+                        <circle
+                          cx={pt.x}
+                          cy={pt.y}
+                          r="4.5"
+                          fill="#FFFFFF"
+                          stroke="#D97745"
+                          strokeWidth="2.5"
+                        />
+                        <text
+                          x={pt.x}
+                          y={156}
+                          textAnchor="middle"
+                          className="text-[11px] fill-[#6E6A63]"
+                        >
+                          {pt.label}
+                        </text>
+                      </g>
+                    ))}
+                  </svg>
+                </div>
+              </div>
+
+              {/* Quick Actions Box matching Image 2 top-right */}
+              <div className="lg:col-span-4 bg-white border border-[#E6E0D6] rounded-2xl p-6 flex flex-col justify-between">
+                <div>
+                  <h2 className="text-base font-bold text-[#292824] mb-1">Quick Actions</h2>
+                  <p className="text-xs text-[#6E6A63] mb-4">
+                    Common workflows for your printed QR fleet
+                  </p>
+
+                  <div className="space-y-2.5">
+                    <button
+                      type="button"
+                      onClick={onOpenCreateModal}
+                      disabled={!quotaCheck.allowed}
+                      className="w-full flex items-center gap-3 p-3 bg-[#F8F5EF] hover:bg-[#FDF2EC] border border-[#E6E0D6] rounded-xl text-xs font-bold text-[#292824] transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      <Plus className="w-4 h-4 text-[#D97745]" />
+                      <span>Create New QR</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setActiveNav('CODES')}
+                      className="w-full flex items-center gap-3 p-3 bg-[#F8F5EF] hover:bg-[#FDF2EC] border border-[#E6E0D6] rounded-xl text-xs font-bold text-[#292824] transition-colors cursor-pointer"
+                    >
+                      <QrCode className="w-4 h-4 text-[#D97745]" />
+                      <span>View All Codes ({activeUserBarcodes.length})</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={onOpenScanner}
+                      className="w-full flex items-center gap-3 p-3 bg-[#F8F5EF] hover:bg-[#FDF2EC] border border-[#E6E0D6] rounded-xl text-xs font-bold text-[#292824] transition-colors cursor-pointer"
+                    >
+                      <Camera className="w-4 h-4 text-[#D97745]" />
+                      <span>Launch QR Scanner</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-[#EFECE6] text-[11px] text-[#6E6A63] flex justify-between">
+                  <span>Direct Routing: {user.allowDirectRedirect ? 'Enabled' : 'Locked'}</span>
+                  <span>·</span>
+                  <span>White-Label: {user.allowWhiteLabel ? 'Enabled' : 'Locked'}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* QR Codes Section (Visible on DASHBOARD and CODES tabs) */}
+          {(activeNav === 'DASHBOARD' || activeNav === 'CODES') && (
+            <section className="space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-bold text-[#292824]">
+                    {showDeleted ? 'Soft-Deleted QR Codes (Recovery Bin)' : 'Your Dynamic QR Codes'}
+                  </h2>
+                  <p className="text-xs text-[#6E6A63]">
+                    Edit destination URLs anytime while keeping the printed Short Code intact
+                  </p>
+                </div>
+
+                {/* Search & Content Type Filter Bar */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-[#6E6A63] absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      aria-label="Filter QR codes"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search title or Short ID..."
+                      className="pl-8 pr-3 py-2 bg-white border border-[#E6E0D6] rounded-xl text-xs text-[#292824] focus:outline-none focus:border-[#D97745]"
+                    />
+                  </div>
+
+                  <select
+                    aria-label="Filter by content type"
+                    value={typeFilter}
+                    onChange={(e) => setTypeFilter(e.target.value as 'ALL' | ContentType)}
+                    className="px-3 py-2 bg-white border border-[#E6E0D6] rounded-xl text-xs font-semibold text-[#292824]"
+                  >
+                    <option value="ALL">All Types (6)</option>
+                    <option value="URL">URL</option>
+                    <option value="TEXT">TEXT</option>
+                    <option value="IMAGE">IMAGE</option>
+                    <option value="VCARD">VCARD</option>
+                    <option value="WIFI">WIFI</option>
+                    <option value="GEO_EVENT">GEO_EVENT</option>
+                  </select>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleted(!showDeleted)}
+                    className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-colors cursor-pointer ${
+                      showDeleted
+                        ? 'bg-[#233229] text-white border-[#233229]'
+                        : 'bg-white text-[#6E6A63] border-[#E6E0D6] hover:text-[#292824]'
+                    }`}
+                  >
+                    Trash ({deletedUserBarcodes.length})
+                  </button>
+                </div>
+              </div>
+
+              {filteredBarcodes.length === 0 ? (
+                <div className="bg-white border border-[#E6E0D6] rounded-2xl p-10 text-center">
+                  <QrCode className="w-10 h-10 text-[#D97745] mx-auto mb-2" />
+                  <h3 className="text-base font-bold text-[#292824]">
+                    {showDeleted ? 'No deleted QR codes' : 'No matching QR codes found'}
+                  </h3>
+                  <p className="text-xs text-[#6E6A63] mt-1 mb-4">
+                    Create a dynamic QR code to start routing scans in real time.
+                  </p>
+                  {!showDeleted && (
+                    <button
+                      type="button"
+                      onClick={onOpenCreateModal}
+                      disabled={!quotaCheck.allowed}
+                      className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-[#D97745] text-white text-xs font-bold rounded-xl cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Create First QR Code</span>
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredBarcodes.map((bc) => {
+                    const shortUrl = buildShortLinkUrl(bc.shortCode);
+                    return (
+                      <div
+                        key={bc.shortCode}
+                        className="bg-white border border-[#E6E0D6] rounded-2xl p-5 flex flex-col justify-between gap-4 hover:border-[#D97745]/60 transition-colors"
+                      >
+                        <div className="flex items-start gap-4">
+                          <button
+                            type="button"
+                            onClick={() => onOpenPrintModal(bc)}
+                            aria-label={`Open Print Studio for ${bc.title}`}
+                            className="p-2 bg-[#F8F5EF] border border-[#E6E0D6] rounded-xl shrink-0 cursor-pointer hover:border-[#D97745]"
+                          >
+                            <QRCodeSVG
+                              value={shortUrl}
+                              size={56}
+                              fgColor={bc.qrColor || '#292824'}
+                              bgColor="#FFFFFF"
+                            />
+                          </button>
+
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <h3 className="text-sm font-bold text-[#292824] truncate">
+                                {bc.title}
+                              </h3>
+                              {/* Clean unboxed metadata status */}
+                              <span
+                                className={`text-[11px] font-bold shrink-0 ${
+                                  bc.codeActive ? 'text-[#2E6B3E]' : 'text-[#6E6A63]'
+                                }`}
+                              >
+                                {bc.codeActive ? 'Active' : 'Paused'}
+                              </span>
+                            </div>
+
+                            <div className="text-xs text-[#6E6A63] mt-1 flex items-center gap-1.5">
+                              <span className="font-mono font-semibold text-[#292824]">
+                                {bc.shortCode}
+                              </span>
+                              <span>·</span>
+                              <span>{bc.type}</span>
+                              <span>·</span>
+                              <span>{bc.redirectMode}</span>
+                            </div>
+
+                            <div className="mt-2 text-xs font-mono text-[#6E6A63] tabular-nums">
+                              <strong className="text-[#292824]">
+                                {bc.scanCount.toLocaleString()}
+                              </strong>{' '}
+                              / {bc.maxScansLimit.toLocaleString()} scans
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Action Bar */}
+                        <div className="pt-3 border-t border-[#EFECE6] flex items-center justify-between gap-2">
+                          {!bc.isDeleted ? (
+                            <>
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => onOpenEditModal(bc)}
+                                  aria-label={`Edit ${bc.title}`}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-[#F8F5EF] hover:bg-[#FDF2EC] text-[#292824] hover:text-[#D97745] border border-[#E6E0D6] rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                                >
+                                  <Edit3 className="w-3.5 h-3.5" />
+                                  <span>Edit</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => onOpenPrintModal(bc)}
+                                  aria-label={`Print ${bc.title}`}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-[#F8F5EF] hover:bg-[#FDF2EC] text-[#292824] hover:text-[#D97745] border border-[#E6E0D6] rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                                >
+                                  <Printer className="w-3.5 h-3.5" />
+                                  <span>Print</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => onSimulateScan(bc.shortCode)}
+                                  aria-label={`Test scan ${bc.title}`}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-[#F8F5EF] hover:bg-[#FDF2EC] text-[#D97745] border border-[#E6E0D6] rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                                >
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                  <span>Scan</span>
+                                </button>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  role="switch"
+                                  aria-checked={bc.codeActive}
+                                  aria-label={`Toggle active status for ${bc.title}`}
+                                  onClick={() => onToggleBarcodeActive(bc)}
+                                  className={`w-10 h-5.5 rounded-full transition-colors p-0.5 cursor-pointer ${
+                                    bc.codeActive ? 'bg-[#2E6B3E]' : 'bg-[#D1CBC0]'
+                                  }`}
+                                >
+                                  <span
+                                    className={`block w-4.5 h-4.5 rounded-full bg-white transition-transform ${
+                                      bc.codeActive ? 'translate-x-4.5' : 'translate-x-0'
+                                    }`}
+                                  />
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => onSoftDeleteBarcode(bc)}
+                                  aria-label={`Delete ${bc.title}`}
+                                  className="p-1.5 text-[#6E6A63] hover:text-red-600 transition-colors cursor-pointer"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => onRestoreBarcode(bc)}
+                              className="w-full inline-flex items-center justify-center gap-1.5 py-1.5 px-3 bg-[#DCE9DD] text-[#2E6B3E] rounded-lg text-xs font-bold cursor-pointer"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
+                              <span>Restore Soft-Deleted QR</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* Scan Logs Tab */}
+          {activeNav === 'LOGS' && (
+            <section className="bg-white border border-[#E6E0D6] rounded-2xl overflow-hidden">
+              <div className="p-5 border-b border-[#EFECE6] flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-bold text-[#292824]">
+                    Atomic Scan Activity Logs
+                  </h2>
+                  <p className="text-xs text-[#6E6A63]">
+                    Isolated scanLog records prevent Firestore document contention on high-traffic QRs
+                  </p>
+                </div>
+                <span className="text-xs font-mono text-[#6E6A63] tabular-nums">
+                  {scanLogs.length} recent events
+                </span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-[#EFECE6] text-[11px] font-semibold text-[#6E6A63] bg-[#F8F5EF]">
+                      <th className="py-3 px-4">Short Code</th>
+                      <th className="py-3 px-4">Campaign</th>
+                      <th className="py-3 px-4">Visitor Client / Metadata</th>
+                      <th className="py-3 px-4 text-right">Timestamp</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#EFECE6] text-xs">
+                    {scanLogs.map((log) => (
+                      <tr key={log.id} className="hover:bg-[#F8F5EF]/60">
+                        <td className="py-3 px-4 font-mono font-bold text-[#D97745]">
+                          {log.barcodeId}
+                        </td>
+                        <td className="py-3 px-4 font-semibold text-[#292824]">{log.title}</td>
+                        <td className="py-3 px-4 text-[#6E6A63]">{log.deviceInfo}</td>
+                        <td className="py-3 px-4 text-right font-mono text-[#6E6A63] tabular-nums">
+                          {typeof log.timestamp === 'string'
+                            ? new Date(log.timestamp).toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })
+                            : 'Just now'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
+          {/* Account Settings Tab */}
+          {activeNav === 'SETTINGS' && (
+            <section className="max-w-xl bg-white border border-[#E6E0D6] rounded-2xl p-6 space-y-5">
+              <div>
+                <h2 className="text-base font-bold text-[#292824]">Account Profile & Plan</h2>
+                <p className="text-xs text-[#6E6A63]">
+                  Role and quota limits are enforced in Firestore security rules
+                </p>
+              </div>
+
+              <form onSubmit={handleSaveProfile} className="space-y-4">
+                <div>
+                  <label
+                    htmlFor="settings-display-name"
+                    className="block text-xs font-semibold text-[#292824] mb-1"
+                  >
+                    Display Name
+                  </label>
+                  <input
+                    id="settings-display-name"
+                    type="text"
+                    value={profileName}
+                    onChange={(e) => setProfileName(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-[#F8F5EF] border border-[#E6E0D6] rounded-xl text-sm"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="p-3 bg-[#F8F5EF] rounded-xl border border-[#E6E0D6]">
+                    <span className="text-[#6E6A63] block">Email</span>
+                    <span className="font-semibold text-[#292824]">{user.email}</span>
+                  </div>
+                  <div className="p-3 bg-[#F8F5EF] rounded-xl border border-[#E6E0D6]">
+                    <span className="text-[#6E6A63] block">Role & Plan</span>
+                    <span className="font-semibold text-[#292824]">
+                      {user.role} · {user.plan}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 bg-[#D97745] hover:bg-[#c56737] text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                >
+                  {profileSaved ? 'Profile Updated!' : 'Save Display Name'}
+                </button>
+              </form>
+            </section>
+          )}
+        </main>
+      </div>
+    </div>
+  );
+};

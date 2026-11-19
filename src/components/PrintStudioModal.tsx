@@ -123,7 +123,8 @@ export const PrintStudioModal: React.FC<PrintStudioModalProps> = ({
 
             {!barcode.hideBranding && (
               <span className="mt-3 text-[11px] font-semibold text-[#6E6A63] tracking-tight">
-                Powered by <span className="text-[#D97745]">QRDynamic</span>
+                Powered by <strong className="text-[#292824]">Dynamic </strong>
+                <span className="text-[#D97745] font-bold">QR</span>
               </span>
             )}
           </div>

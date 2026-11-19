@@ -37,6 +37,8 @@ import {
   formatPlanPrice,
   resolveAutoRedirectDelay,
 } from '../utils/qrLogic';
+import { BrandLogo } from './BrandLogo';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface AdminDashboardViewProps {
   user: UserProfile;
@@ -154,31 +156,14 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
   return (
     <div className="min-h-screen bg-[#F8F5EF] text-[#292824] flex flex-col lg:flex-row">
-      {/* Dark Forest Green Sidebar (#233229) matching Image 2 top-right */}
-      <aside className="w-full lg:w-64 bg-[#233229] text-white flex flex-col justify-between shrink-0 border-b lg:border-b-0 lg:border-r border-white/10">
+      {/* Desktop Dark Forest Green Sidebar (#233229) */}
+      <aside className="hidden lg:flex lg:w-64 bg-[#233229] text-white flex-col justify-between shrink-0 border-r border-white/10">
         <div>
           <div className="p-6 flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-[#D97745] text-white flex items-center justify-center">
-                <QrCode className="w-5 h-5" />
-              </div>
-              <span className="text-lg font-bold tracking-tight">
-                QR<span className="text-[#D97745]">Dynamic</span>
-              </span>
-            </div>
-
-            {user.role === 'SUPER_ADMIN' && onSwitchToSuperAdmin && (
-              <button
-                type="button"
-                onClick={onSwitchToSuperAdmin}
-                className="lg:hidden px-2.5 py-1 bg-[#D97745] text-white text-xs font-bold rounded-lg cursor-pointer"
-              >
-                Platform Console
-              </button>
-            )}
+            <BrandLogo size="md" theme="dark" />
           </div>
 
-          <nav className="px-3 pb-4 lg:space-y-1 flex lg:flex-col gap-1 overflow-x-auto">
+          <nav className="px-3 pb-4 space-y-1 flex flex-col">
             <button
               type="button"
               onClick={() => setActiveNav('DASHBOARD')}
@@ -238,7 +223,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               }`}
             >
               <Crown className="w-4 h-4 shrink-0" />
-              <span>Plans & Pricing</span>
+              <span>Plans &amp; Pricing</span>
             </button>
 
             <button
@@ -256,8 +241,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           </nav>
         </div>
 
-        {/* Bottom Clickable Plan Card & Role Switcher */}
-        <div className="hidden lg:block p-4 space-y-3">
+        {/* Bottom Clickable Plan Card, PWA Install & Role Switcher */}
+        <div className="p-4 space-y-3">
           <button
             type="button"
             onClick={() => setActiveNav('PLANS')}
@@ -281,6 +266,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
             </span>
           </button>
 
+          <PWAInstallButton variant="sidebar" showFallbackGuide />
+
           {user.role === 'SUPER_ADMIN' && onSwitchToSuperAdmin && (
             <button
               type="button"
@@ -296,8 +283,59 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
       {/* Main Workspace Area */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Top Header */}
-        <header className="bg-white border-b border-[#E6E0D6] px-6 py-4 flex items-center justify-between gap-4">
+        {/* Compact Mobile Top App Bar (56px, Single Sticky Top Bar) */}
+        <header className="lg:hidden sticky top-0 z-30 h-14 px-3.5 bg-[#233229] text-white border-b border-white/10 flex items-center justify-between gap-2">
+          <BrandLogo size="sm" theme="dark" />
+
+          <div className="flex items-center gap-1.5">
+            <PWAInstallButton variant="compact" />
+
+            <button
+              type="button"
+              onClick={onOpenScanner}
+              aria-label="Open QR Scanner"
+              className="min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/15 text-white cursor-pointer"
+            >
+              <Camera className="w-4 h-4 text-[#D97745]" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveNav('SETTINGS')}
+              aria-label="Open Settings"
+              className={`min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl cursor-pointer transition-colors ${
+                activeNav === 'SETTINGS'
+                  ? 'bg-[#D97745] text-white'
+                  : 'bg-white/10 hover:bg-white/15 text-white'
+              }`}
+            >
+              <Settings className="w-4 h-4" />
+            </button>
+
+            {user.role === 'SUPER_ADMIN' && onSwitchToSuperAdmin && (
+              <button
+                type="button"
+                onClick={onSwitchToSuperAdmin}
+                aria-label="Open Platform Console"
+                className="min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl bg-[#D97745]/25 text-[#D97745] border border-[#D97745]/40 cursor-pointer"
+              >
+                <Shield className="w-4 h-4" />
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={onSignOut}
+              aria-label="Sign out"
+              className="min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/15 text-[#E6E0D6] cursor-pointer"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        </header>
+
+        {/* Desktop Top Header */}
+        <header className="hidden lg:flex bg-white border-b border-[#E6E0D6] px-6 py-4 items-center justify-between gap-4">
           <div>
             <h1 className="text-xl font-bold text-[#292824]">
               Hello, {user.name.split(' ')[0]}!
@@ -315,7 +353,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-[#F8F5EF] hover:bg-[#EFECE6] text-[#292824] border border-[#E6E0D6] text-xs font-bold rounded-xl transition-colors cursor-pointer whitespace-nowrap"
             >
               <Camera className="w-3.5 h-3.5 text-[#D97745]" />
-              <span className="hidden sm:inline">Scanner</span>
+              <span>Scanner</span>
             </button>
 
             <button
@@ -341,54 +379,78 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
         {/* Quota Warning Banner if limit reached or suspended */}
         {!quotaCheck.allowed && (
-          <div className="mx-6 mt-4 p-3.5 bg-[#FDF2EC] border border-[#D97745] rounded-2xl text-xs font-semibold text-[#292824] flex items-center justify-between">
+          <div className="mx-4 lg:mx-6 mt-4 p-3.5 bg-[#FDF2EC] border border-[#D97745] rounded-2xl text-xs font-semibold text-[#292824] flex items-center justify-between">
             <span>{quotaCheck.reason}</span>
           </div>
         )}
 
-        <main className="p-6 space-y-6 max-w-7xl w-full mx-auto">
-          {/* 4 KPI Stat Cards matching Image 2 top-right */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white border border-[#E6E0D6] rounded-2xl p-5">
-              <div className="w-9 h-9 rounded-xl bg-[#FDF2EC] text-[#D97745] flex items-center justify-center mb-3">
-                <QrCode className="w-5 h-5" />
+        <main className="px-4 py-4 sm:p-6 pb-24 lg:pb-8 space-y-5 sm:space-y-6 max-w-7xl w-full mx-auto">
+          {/* Mobile Contextual Greeting Strip */}
+          <div className="lg:hidden flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className="text-lg font-bold text-[#292824] truncate">
+                Hello, {user.name.split(' ')[0]}!
+              </h1>
+              <p className="text-[11px] text-[#6E6A63] truncate">
+                {currentPlanConfig?.label || user.plan} · {activeUserBarcodes.length}/{user.maxBarcodes} codes · {user.status}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setActiveNav('PLANS')}
+              className="inline-flex items-center gap-1 px-3 py-1.5 min-h-[36px] bg-white border border-[#E6E0D6] rounded-xl text-[11px] font-bold text-[#D97745] shrink-0 cursor-pointer"
+            >
+              <Crown className="w-3.5 h-3.5" />
+              <span>{user.plan}</span>
+            </button>
+          </div>
+
+          {/* 4 KPI Stat Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="bg-white border border-[#E6E0D6] rounded-2xl p-4 sm:p-5">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#FDF2EC] text-[#D97745] flex items-center justify-center mb-2.5 sm:mb-3">
+                <QrCode className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
-              <div className="text-2xl font-bold text-[#292824] font-mono tabular-nums">
+              <div className="text-xl sm:text-2xl font-bold text-[#292824] font-mono tabular-nums">
                 {activeUserBarcodes.length}{' '}
                 <span className="text-xs font-normal text-[#6E6A63]">/ {user.maxBarcodes}</span>
               </div>
               <div className="text-xs text-[#6E6A63] mt-0.5">Total Codes</div>
             </div>
 
-            <div className="bg-white border border-[#E6E0D6] rounded-2xl p-5">
-              <div className="w-9 h-9 rounded-xl bg-[#DCE9DD] text-[#2E6B3E] flex items-center justify-center mb-3">
-                <Activity className="w-5 h-5" />
+            <div className="bg-white border border-[#E6E0D6] rounded-2xl p-4 sm:p-5">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#DCE9DD] text-[#2E6B3E] flex items-center justify-center mb-2.5 sm:mb-3">
+                <Activity className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
-              <div className="text-2xl font-bold text-[#292824] font-mono tabular-nums">
+              <div className="text-xl sm:text-2xl font-bold text-[#292824] font-mono tabular-nums">
                 {totalScans.toLocaleString()}
               </div>
               <div className="text-xs text-[#6E6A63] mt-0.5">Total Scans</div>
             </div>
 
-            <div className="bg-white border border-[#E6E0D6] rounded-2xl p-5">
-              <div className="w-9 h-9 rounded-xl bg-[#EFECE6] text-[#292824] flex items-center justify-center mb-3">
-                <TrendingUp className="w-5 h-5" />
+            <div className="bg-white border border-[#E6E0D6] rounded-2xl p-4 sm:p-5">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#EFECE6] text-[#292824] flex items-center justify-center mb-2.5 sm:mb-3">
+                <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
-              <div className="text-2xl font-bold text-[#292824] font-mono tabular-nums">
+              <div className="text-xl sm:text-2xl font-bold text-[#292824] font-mono tabular-nums">
                 ~ {thisMonthScans.toLocaleString()}
               </div>
               <div className="text-xs text-[#6E6A63] mt-0.5">This Month</div>
             </div>
 
-            <div className="bg-white border border-[#E6E0D6] rounded-2xl p-5">
-              <div className="w-9 h-9 rounded-xl bg-[#DCE9DD] text-[#2E6B3E] flex items-center justify-center mb-3">
-                <CheckCircle2 className="w-5 h-5" />
+            <button
+              type="button"
+              onClick={() => setActiveNav('PLANS')}
+              className="text-left bg-white hover:border-[#D97745] border border-[#E6E0D6] rounded-2xl p-4 sm:p-5 transition-colors cursor-pointer"
+            >
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#DCE9DD] text-[#2E6B3E] flex items-center justify-center mb-2.5 sm:mb-3">
+                <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
-              <div className="text-2xl font-bold text-[#292824]">{user.plan}</div>
-              <div className="text-xs text-[#6E6A63] mt-0.5">
+              <div className="text-xl sm:text-2xl font-bold text-[#292824]">{user.plan}</div>
+              <div className="text-xs text-[#6E6A63] mt-0.5 truncate">
                 Max {user.maxScansPerBarcode.toLocaleString()} scans/code
               </div>
-            </div>
+            </button>
           </div>
 
           {activeNav === 'DASHBOARD' && (
@@ -875,7 +937,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                     <button
                       type="button"
                       onClick={async () => {
-                        const summary = `QRDynamic Upgrade Request — Account: ${user.email}, Current Plan: ${user.plan}, Requested Plan: ${selectedUpgradePlan.label} (${selectedUpgradePlan.plan} - ${billingCycle})`;
+                        const summary = `Dynamic QR Upgrade Request — Account: ${user.email}, Current Plan: ${user.plan}, Requested Plan: ${selectedUpgradePlan.label} (${selectedUpgradePlan.plan} - ${billingCycle})`;
                         try {
                           await navigator.clipboard.writeText(summary);
                         } catch {
@@ -1158,55 +1220,123 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
           {/* Account Settings Tab */}
           {activeNav === 'SETTINGS' && (
-            <section className="max-w-xl bg-white border border-[#E6E0D6] rounded-2xl p-6 space-y-5">
-              <div>
-                <h2 className="text-base font-bold text-[#292824]">Account Profile & Plan</h2>
-                <p className="text-xs text-[#6E6A63]">
-                  Role and quota limits are enforced in Firestore security rules
-                </p>
-              </div>
+            <div className="max-w-2xl space-y-5">
+              <PWAInstallButton variant="card" showFallbackGuide />
 
-              <form onSubmit={handleSaveProfile} className="space-y-4">
+              <section className="bg-white border border-[#E6E0D6] rounded-2xl p-5 sm:p-6 space-y-5">
                 <div>
-                  <label
-                    htmlFor="settings-display-name"
-                    className="block text-xs font-semibold text-[#292824] mb-1"
+                  <h2 className="text-base font-bold text-[#292824]">Account Profile &amp; Plan</h2>
+                  <p className="text-xs text-[#6E6A63]">
+                    Role and quota limits are enforced in Firestore security rules
+                  </p>
+                </div>
+
+                <form onSubmit={handleSaveProfile} className="space-y-4">
+                  <div>
+                    <label
+                      htmlFor="settings-display-name"
+                      className="block text-xs font-semibold text-[#292824] mb-1"
+                    >
+                      Display Name
+                    </label>
+                    <input
+                      id="settings-display-name"
+                      type="text"
+                      value={profileName}
+                      onChange={(e) => setProfileName(e.target.value)}
+                      className="w-full min-h-[44px] px-3.5 py-2.5 bg-[#F8F5EF] border border-[#E6E0D6] rounded-xl text-sm"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div className="p-3 bg-[#F8F5EF] rounded-xl border border-[#E6E0D6]">
+                      <span className="text-[#6E6A63] block">Email</span>
+                      <span className="font-semibold text-[#292824] break-all">{user.email}</span>
+                    </div>
+                    <div className="p-3 bg-[#F8F5EF] rounded-xl border border-[#E6E0D6]">
+                      <span className="text-[#6E6A63] block">Role &amp; Plan</span>
+                      <span className="font-semibold text-[#292824]">
+                        {user.role} · {user.plan}
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="min-h-[44px] px-5 py-2.5 bg-[#D97745] hover:bg-[#c56737] text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
                   >
-                    Display Name
-                  </label>
-                  <input
-                    id="settings-display-name"
-                    type="text"
-                    value={profileName}
-                    onChange={(e) => setProfileName(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-[#F8F5EF] border border-[#E6E0D6] rounded-xl text-sm"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div className="p-3 bg-[#F8F5EF] rounded-xl border border-[#E6E0D6]">
-                    <span className="text-[#6E6A63] block">Email</span>
-                    <span className="font-semibold text-[#292824]">{user.email}</span>
-                  </div>
-                  <div className="p-3 bg-[#F8F5EF] rounded-xl border border-[#E6E0D6]">
-                    <span className="text-[#6E6A63] block">Role & Plan</span>
-                    <span className="font-semibold text-[#292824]">
-                      {user.role} · {user.plan}
-                    </span>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 bg-[#D97745] hover:bg-[#c56737] text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
-                >
-                  {profileSaved ? 'Profile Updated!' : 'Save Display Name'}
-                </button>
-              </form>
-            </section>
+                    {profileSaved ? 'Profile Updated!' : 'Save Display Name'}
+                  </button>
+                </form>
+              </section>
+            </div>
           )}
         </main>
       </div>
+
+      {/* Mobile Fixed Bottom Thumb Navigation Bar (64px + safe-area) */}
+      <nav
+        aria-label="Mobile workspace navigation"
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#E6E0D6] pb-safe"
+      >
+        <div className="grid grid-cols-5 items-center h-16 px-1">
+          <button
+            type="button"
+            onClick={() => setActiveNav('DASHBOARD')}
+            className={`flex flex-col items-center justify-center min-h-[48px] gap-1 text-[10px] font-bold transition-colors cursor-pointer ${
+              activeNav === 'DASHBOARD' ? 'text-[#D97745]' : 'text-[#6E6A63]'
+            }`}
+          >
+            <LayoutDashboard className="w-5 h-5" />
+            <span>Home</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveNav('CODES')}
+            className={`flex flex-col items-center justify-center min-h-[48px] gap-1 text-[10px] font-bold transition-colors cursor-pointer ${
+              activeNav === 'CODES' ? 'text-[#D97745]' : 'text-[#6E6A63]'
+            }`}
+          >
+            <QrCode className="w-5 h-5" />
+            <span>Codes</span>
+          </button>
+
+          <div className="flex items-center justify-center">
+            <button
+              type="button"
+              onClick={onOpenCreateModal}
+              disabled={!quotaCheck.allowed}
+              aria-label="Create New Dynamic QR"
+              className="w-12 h-12 rounded-2xl bg-[#D97745] hover:bg-[#c56737] active:scale-95 text-white flex items-center justify-center shadow-md shadow-[#D97745]/25 transition-transform cursor-pointer disabled:opacity-40"
+            >
+              <Plus className="w-6 h-6" />
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setActiveNav('LOGS')}
+            className={`flex flex-col items-center justify-center min-h-[48px] gap-1 text-[10px] font-bold transition-colors cursor-pointer ${
+              activeNav === 'LOGS' ? 'text-[#D97745]' : 'text-[#6E6A63]'
+            }`}
+          >
+            <History className="w-5 h-5" />
+            <span>Logs</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveNav('PLANS')}
+            className={`flex flex-col items-center justify-center min-h-[48px] gap-1 text-[10px] font-bold transition-colors cursor-pointer ${
+              activeNav === 'PLANS' ? 'text-[#D97745]' : 'text-[#6E6A63]'
+            }`}
+          >
+            <Crown className="w-5 h-5" />
+            <span>Plans</span>
+          </button>
+        </div>
+      </nav>
     </div>
   );
 };

@@ -6,14 +6,37 @@
     --font-mono: 'JetBrains Mono', monospace;
   }
 
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+
   body {
     font-family: var(--font-sans);
     background-color: #F8F5EF;
     color: #292824;
     -webkit-font-smoothing: antialiased;
+    overscroll-behavior-y: none;
   }
 }
 
 .tabular-nums {
   font-variant-numeric: tabular-nums;
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

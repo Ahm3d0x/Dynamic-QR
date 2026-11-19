@@ -32,6 +32,7 @@ import {
   parseWifi,
   resolveAutoRedirectDelay,
 } from '../utils/qrLogic';
+import { BrandLogo } from './BrandLogo';
 
 interface SmartRedirectViewProps {
   shortCode: string;
@@ -161,14 +162,9 @@ export const SmartRedirectView: React.FC<SmartRedirectViewProps> = ({
           <button
             type="button"
             onClick={onExitToHome}
-            className="inline-flex items-center gap-2 text-sm font-bold text-[#292824] cursor-pointer"
+            className="cursor-pointer"
           >
-            <div className="w-8 h-8 rounded-lg bg-[#D97745] text-white flex items-center justify-center">
-              <QrCode className="w-4 h-4" />
-            </div>
-            <span>
-              QR<span className="text-[#D97745]">Dynamic</span>
-            </span>
+            <BrandLogo size="sm" theme="light" />
           </button>
         </header>
 
@@ -189,8 +185,8 @@ export const SmartRedirectView: React.FC<SmartRedirectViewProps> = ({
         </main>
 
         <footer className="text-center text-xs text-[#6E6A63]">
-          Powered by <strong className="text-[#292824]">QR</strong>
-          <strong className="text-[#D97745]">Dynamic</strong>
+          Powered by <strong className="text-[#292824]">Dynamic </strong>
+          <strong className="text-[#D97745]">QR</strong>
         </footer>
       </div>
     );
@@ -238,14 +234,9 @@ export const SmartRedirectView: React.FC<SmartRedirectViewProps> = ({
           <button
             type="button"
             onClick={onExitToHome}
-            className="inline-flex items-center gap-2 text-sm font-bold text-[#292824] cursor-pointer"
+            className="cursor-pointer"
           >
-            <div className="w-8 h-8 rounded-lg bg-[#D97745] text-white flex items-center justify-center">
-              <QrCode className="w-4 h-4" />
-            </div>
-            <span>
-              QR<span className="text-[#D97745]">Dynamic</span>
-            </span>
+            <BrandLogo size="sm" theme="light" />
           </button>
 
           <button
@@ -270,9 +261,9 @@ export const SmartRedirectView: React.FC<SmartRedirectViewProps> = ({
           <button
             type="button"
             onClick={onExitToHome}
-            className="w-full py-2.5 px-4 bg-[#D97745] hover:bg-[#c56737] text-white text-sm font-semibold rounded-xl transition-colors cursor-pointer"
+            className="w-full min-h-[44px] py-2.5 px-4 bg-[#D97745] hover:bg-[#c56737] text-white text-sm font-semibold rounded-xl transition-colors cursor-pointer"
           >
-            Return to QRDynamic Home
+            Return to Dynamic QR Home
           </button>
         </main>
 
@@ -293,14 +284,9 @@ export const SmartRedirectView: React.FC<SmartRedirectViewProps> = ({
           <button
             type="button"
             onClick={onExitToHome}
-            className="inline-flex items-center gap-2 text-base font-bold text-[#292824] cursor-pointer whitespace-nowrap"
+            className="cursor-pointer"
           >
-            <div className="w-8 h-8 rounded-lg bg-[#D97745] text-white flex items-center justify-center">
-              <QrCode className="w-4 h-4" />
-            </div>
-            <span>
-              QR<span className="text-[#D97745]">Dynamic</span>
-            </span>
+            <BrandLogo size="sm" theme="light" />
           </button>
 
           <div className="flex items-center gap-3">
@@ -725,8 +711,8 @@ export const SmartRedirectView: React.FC<SmartRedirectViewProps> = ({
       <footer className="py-5 text-center text-xs text-[#6E6A63]">
         {!activeBarcode.hideBranding ? (
           <span>
-            Powered by <strong className="text-[#292824]">QR</strong>
-            <strong className="text-[#D97745]">Dynamic</strong>
+            Powered by <strong className="text-[#292824]">Dynamic </strong>
+            <strong className="text-[#D97745]">QR</strong>
           </span>
         ) : (
           <span className="font-mono text-[11px] opacity-60">{activeBarcode.shortCode}</span>

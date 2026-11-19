@@ -27,6 +27,8 @@ import {
   UserRole,
 } from '../types/qr';
 import { formatPlanPrice } from '../utils/qrLogic';
+import { BrandLogo } from './BrandLogo';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface SuperAdminViewProps {
   currentUser: UserProfile;
@@ -141,21 +143,14 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
 
   return (
     <div className="min-h-screen bg-[#F8F5EF] text-[#292824] flex flex-col lg:flex-row">
-      {/* Dark Forest Green Sidebar (#233229) */}
-      <aside className="w-full lg:w-64 bg-[#233229] text-white flex flex-col justify-between shrink-0">
+      {/* Desktop Dark Forest Green Sidebar (#233229) */}
+      <aside className="hidden lg:flex lg:w-64 bg-[#233229] text-white flex-col justify-between shrink-0 border-r border-white/10">
         <div>
           <div className="p-6 flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-[#D97745] text-white flex items-center justify-center">
-                <QrCode className="w-5 h-5" />
-              </div>
-              <span className="text-lg font-bold tracking-tight">
-                QR<span className="text-[#D97745]">Dynamic</span>
-              </span>
-            </div>
+            <BrandLogo size="md" theme="dark" />
           </div>
 
-          <nav className="px-3 pb-4 lg:space-y-1 flex lg:flex-col gap-1 overflow-x-auto">
+          <nav className="px-3 pb-4 space-y-1 flex flex-col">
             <button
               type="button"
               onClick={() => setActiveTab('SUBSCRIBERS')}
@@ -179,7 +174,7 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
               }`}
             >
               <UserPlus className="w-4 h-4 shrink-0" />
-              <span>Admin Invites & Access</span>
+              <span>Admin Invites &amp; Access</span>
             </button>
 
             <button
@@ -205,12 +200,14 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
               }`}
             >
               <Sliders className="w-4 h-4 shrink-0" />
-              <span>Plans & Quotas</span>
+              <span>Plans &amp; Quotas</span>
             </button>
           </nav>
         </div>
 
-        <div className="hidden lg:block p-4 space-y-2.5">
+        <div className="p-4 space-y-2.5">
+          <PWAInstallButton variant="sidebar" showFallbackGuide />
+
           <button
             type="button"
             onClick={onSwitchToAdminDashboard}
@@ -224,7 +221,34 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="bg-white border-b border-[#E6E0D6] px-6 py-4 flex items-center justify-between gap-4">
+        {/* Compact Mobile Top App Bar (56px) */}
+        <header className="lg:hidden sticky top-0 z-30 h-14 px-3.5 bg-[#233229] text-white border-b border-white/10 flex items-center justify-between gap-2">
+          <BrandLogo size="sm" theme="dark" />
+
+          <div className="flex items-center gap-1.5">
+            <PWAInstallButton variant="compact" />
+
+            <button
+              type="button"
+              onClick={onSwitchToAdminDashboard}
+              className="min-h-[38px] px-3 py-1.5 bg-white/10 hover:bg-white/15 text-white rounded-xl text-[11px] font-bold whitespace-nowrap cursor-pointer"
+            >
+              Workspace
+            </button>
+
+            <button
+              type="button"
+              onClick={onSignOut}
+              aria-label="Sign out"
+              className="min-w-[40px] min-h-[40px] flex items-center justify-center bg-white/10 hover:bg-white/15 text-[#E6E0D6] rounded-xl cursor-pointer"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        </header>
+
+        {/* Desktop Header */}
+        <header className="hidden lg:flex bg-white border-b border-[#E6E0D6] px-6 py-4 items-center justify-between gap-4">
           <div>
             <h1 className="text-xl font-bold text-[#292824]">Platform Overview</h1>
             <p className="text-xs text-[#6E6A63]">
@@ -233,7 +257,7 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-[#292824]">
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#292824]">
               <Crown className="w-4 h-4 text-[#D97745]" />
               <span>{currentUser.email}</span>
             </span>
@@ -257,9 +281,17 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
           </div>
         </header>
 
-        <main className="p-6 space-y-6 max-w-7xl w-full mx-auto">
+        <main className="px-4 py-4 sm:p-6 pb-24 lg:pb-8 space-y-5 sm:space-y-6 max-w-7xl w-full mx-auto">
+          {/* Mobile Title Strip */}
+          <div className="lg:hidden">
+            <h1 className="text-lg font-bold text-[#292824]">Platform Overview</h1>
+            <p className="text-[11px] text-[#6E6A63] truncate">
+              Super Admin · {currentUser.email}
+            </p>
+          </div>
+
           {/* A. Platform Overview KPI Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <div className="bg-white border border-[#E6E0D6] rounded-2xl p-5">
               <div className="w-9 h-9 rounded-xl bg-[#EFECE6] text-[#292824] flex items-center justify-center mb-3">
                 <Users className="w-5 h-5" />
@@ -382,71 +414,128 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
               )}
             </div>
 
-            {/* B. Subscribers Management Table */}
+            {/* B. Subscribers Management — Mobile Cards + Desktop Table */}
             {activeTab === 'SUBSCRIBERS' && (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-[#EFECE6] text-[11px] font-semibold text-[#6E6A63] bg-[#F8F5EF]">
-                      <th className="py-3.5 px-6">User</th>
-                      <th className="py-3.5 px-4">Email</th>
-                      <th className="py-3.5 px-4">Plan & Role</th>
-                      <th className="py-3.5 px-4 text-right">Usage & Limits</th>
-                      <th className="py-3.5 px-4">Status</th>
-                      <th className="py-3.5 px-6 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#EFECE6] text-xs">
-                    {filteredUsers.map((sub) => {
-                      const subBarcodes = barcodes.filter(
-                        (b) => b.ownerId === sub.uid && !b.isDeleted
-                      );
-                      const subScans = subBarcodes.reduce((s, b) => s + b.scanCount, 0);
-                      return (
-                        <tr key={sub.uid} className="hover:bg-[#F8F5EF]/60">
-                          <td className="py-3.5 px-6 font-bold text-[#292824]">{sub.name}</td>
-                          <td className="py-3.5 px-4 text-[#6E6A63]">{sub.email}</td>
-                          <td className="py-3.5 px-4">
-                            <span className="font-bold text-[#D97745]">{sub.plan}</span>
-                            <span className="text-[#6E6A63]"> · {sub.role}</span>
-                          </td>
-                          <td className="py-3.5 px-4 text-right font-mono tabular-nums text-[#292824]">
-                            {subBarcodes.length}/{sub.maxBarcodes} codes ·{' '}
-                            {subScans.toLocaleString()} scans
-                          </td>
-                          <td className="py-3.5 px-4">
-                            <span
-                              className={`font-bold ${
-                                sub.status === 'ACTIVE' ? 'text-[#2E6B3E]' : 'text-red-600'
-                              }`}
-                            >
-                              {sub.status}
-                            </span>
-                          </td>
-                          <td className="py-3.5 px-6 text-right space-x-2 whitespace-nowrap">
-                            <button
-                              type="button"
-                              aria-label={`Manage Plan for ${sub.name}`}
-                              onClick={() => onOpenPlanManager(sub)}
-                              className="px-3 py-1.5 bg-[#F8F5EF] hover:bg-[#FDF2EC] text-[#292824] hover:text-[#D97745] border border-[#E6E0D6] rounded-lg text-xs font-bold transition-colors cursor-pointer"
-                            >
-                              Manage Plan & Role
-                            </button>
-                            <button
-                              type="button"
-                              aria-label={`${sub.status === 'ACTIVE' ? 'Suspend' : 'Activate'} ${sub.name}`}
-                              onClick={() => onToggleSubscriberStatus(sub)}
-                              className="px-3 py-1.5 bg-[#F8F5EF] hover:bg-[#EFECE6] text-[#6E6A63] hover:text-[#292824] border border-[#E6E0D6] rounded-lg text-xs font-semibold transition-colors cursor-pointer"
-                            >
-                              {sub.status === 'ACTIVE' ? 'Suspend' : 'Activate'}
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <>
+                <div className="md:hidden divide-y divide-[#EFECE6]">
+                  {filteredUsers.map((sub) => {
+                    const subBarcodes = barcodes.filter(
+                      (b) => b.ownerId === sub.uid && !b.isDeleted
+                    );
+                    const subScans = subBarcodes.reduce((s, b) => s + b.scanCount, 0);
+                    return (
+                      <div key={sub.uid} className="p-4 space-y-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="text-sm font-bold text-[#292824] truncate">
+                              {sub.name}
+                            </div>
+                            <div className="text-xs text-[#6E6A63] truncate">{sub.email}</div>
+                          </div>
+                          <span
+                            className={`text-xs font-bold shrink-0 ${
+                              sub.status === 'ACTIVE' ? 'text-[#2E6B3E]' : 'text-red-600'
+                            }`}
+                          >
+                            {sub.status}
+                          </span>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#6E6A63]">
+                          <span className="font-bold text-[#D97745]">{sub.plan}</span>
+                          <span>·</span>
+                          <span>{sub.role}</span>
+                          <span>·</span>
+                          <span className="font-mono tabular-nums text-[#292824]">
+                            {subBarcodes.length}/{sub.maxBarcodes} codes · {subScans.toLocaleString()} scans
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => onOpenPlanManager(sub)}
+                            className="min-h-[42px] px-3 py-2 bg-[#F8F5EF] hover:bg-[#FDF2EC] text-[#292824] hover:text-[#D97745] border border-[#E6E0D6] rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                          >
+                            Manage Plan
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onToggleSubscriberStatus(sub)}
+                            className="min-h-[42px] px-3 py-2 bg-[#F8F5EF] hover:bg-[#EFECE6] text-[#6E6A63] hover:text-[#292824] border border-[#E6E0D6] rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+                          >
+                            {sub.status === 'ACTIVE' ? 'Suspend' : 'Activate'}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-[#EFECE6] text-[11px] font-semibold text-[#6E6A63] bg-[#F8F5EF]">
+                        <th className="py-3.5 px-6">User</th>
+                        <th className="py-3.5 px-4">Email</th>
+                        <th className="py-3.5 px-4">Plan &amp; Role</th>
+                        <th className="py-3.5 px-4 text-right">Usage &amp; Limits</th>
+                        <th className="py-3.5 px-4">Status</th>
+                        <th className="py-3.5 px-6 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#EFECE6] text-xs">
+                      {filteredUsers.map((sub) => {
+                        const subBarcodes = barcodes.filter(
+                          (b) => b.ownerId === sub.uid && !b.isDeleted
+                        );
+                        const subScans = subBarcodes.reduce((s, b) => s + b.scanCount, 0);
+                        return (
+                          <tr key={sub.uid} className="hover:bg-[#F8F5EF]/60">
+                            <td className="py-3.5 px-6 font-bold text-[#292824]">{sub.name}</td>
+                            <td className="py-3.5 px-4 text-[#6E6A63]">{sub.email}</td>
+                            <td className="py-3.5 px-4">
+                              <span className="font-bold text-[#D97745]">{sub.plan}</span>
+                              <span className="text-[#6E6A63]"> · {sub.role}</span>
+                            </td>
+                            <td className="py-3.5 px-4 text-right font-mono tabular-nums text-[#292824]">
+                              {subBarcodes.length}/{sub.maxBarcodes} codes ·{' '}
+                              {subScans.toLocaleString()} scans
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <span
+                                className={`font-bold ${
+                                  sub.status === 'ACTIVE' ? 'text-[#2E6B3E]' : 'text-red-600'
+                                }`}
+                              >
+                                {sub.status}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-6 text-right space-x-2 whitespace-nowrap">
+                              <button
+                                type="button"
+                                aria-label={`Manage Plan for ${sub.name}`}
+                                onClick={() => onOpenPlanManager(sub)}
+                                className="px-3 py-1.5 bg-[#F8F5EF] hover:bg-[#FDF2EC] text-[#292824] hover:text-[#D97745] border border-[#E6E0D6] rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                              >
+                                Manage Plan &amp; Role
+                              </button>
+                              <button
+                                type="button"
+                                aria-label={`${sub.status === 'ACTIVE' ? 'Suspend' : 'Activate'} ${sub.name}`}
+                                onClick={() => onToggleSubscriberStatus(sub)}
+                                className="px-3 py-1.5 bg-[#F8F5EF] hover:bg-[#EFECE6] text-[#6E6A63] hover:text-[#292824] border border-[#E6E0D6] rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                              >
+                                {sub.status === 'ACTIVE' ? 'Suspend' : 'Activate'}
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
 
             {/* Admin Invites & Permission Grant Panel */}
@@ -597,82 +686,149 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
               </div>
             )}
 
-            {/* C. Barcode Management Table */}
+            {/* C. Barcode Management — Mobile Cards + Desktop Table */}
             {activeTab === 'BARCODES' && (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-[#EFECE6] text-[11px] font-semibold text-[#6E6A63] bg-[#F8F5EF]">
-                      <th className="py-3.5 px-6">Short Code</th>
-                      <th className="py-3.5 px-4">Campaign Title</th>
-                      <th className="py-3.5 px-4">Owner</th>
-                      <th className="py-3.5 px-4">Type & Routing</th>
-                      <th className="py-3.5 px-4 text-right">Scans / Limit</th>
-                      <th className="py-3.5 px-4">Status</th>
-                      <th className="py-3.5 px-6 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#EFECE6] text-xs">
-                    {filteredBarcodes.map((bc) => (
-                      <tr key={bc.shortCode} className="hover:bg-[#F8F5EF]/60">
-                        <td className="py-3.5 px-6 font-mono font-bold text-[#D97745]">
-                          {bc.shortCode}
-                        </td>
-                        <td className="py-3.5 px-4 font-bold text-[#292824]">{bc.title}</td>
-                        <td className="py-3.5 px-4 text-[#6E6A63]">{bc.ownerEmail}</td>
-                        <td className="py-3.5 px-4 text-[#292824]">
+              <>
+                <div className="md:hidden divide-y divide-[#EFECE6]">
+                  {filteredBarcodes.map((bc) => (
+                    <div key={bc.shortCode} className="p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="text-xs font-mono font-bold text-[#D97745]">
+                            {bc.shortCode}
+                          </div>
+                          <div className="text-sm font-bold text-[#292824] truncate">{bc.title}</div>
+                          <div className="text-xs text-[#6E6A63] truncate">{bc.ownerEmail}</div>
+                        </div>
+                        <span
+                          className={`text-xs font-bold shrink-0 ${
+                            bc.codeActive && bc.ownerStatus === 'ACTIVE'
+                              ? 'text-[#2E6B3E]'
+                              : 'text-red-600'
+                          }`}
+                        >
+                          {bc.ownerStatus === 'SUSPENDED'
+                            ? 'Suspended'
+                            : bc.codeActive
+                            ? 'Active'
+                            : 'Disabled'}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#6E6A63]">
+                        <span>
                           {bc.type} · {bc.redirectMode}
-                        </td>
-                        <td className="py-3.5 px-4 text-right font-mono tabular-nums">
-                          {bc.scanCount.toLocaleString()} / {bc.maxScansLimit.toLocaleString()}
-                        </td>
-                        <td className="py-3.5 px-4">
-                          <span
-                            className={`font-bold ${
-                              bc.codeActive && bc.ownerStatus === 'ACTIVE'
-                                ? 'text-[#2E6B3E]'
-                                : 'text-red-600'
-                            }`}
-                          >
-                            {bc.ownerStatus === 'SUSPENDED'
-                              ? 'Owner Suspended'
-                              : bc.codeActive
-                              ? 'Active'
-                              : 'Disabled'}
-                          </span>
-                        </td>
-                        <td className="py-3.5 px-6 text-right space-x-2 whitespace-nowrap">
-                          <button
-                            type="button"
-                            aria-label={`Inspect barcode ${bc.shortCode}`}
-                            onClick={() => onPreviewBarcodeLanding(bc.shortCode)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-[#F8F5EF] hover:bg-[#FDF2EC] text-[#D97745] border border-[#E6E0D6] rounded-lg text-xs font-bold cursor-pointer"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                            <span>Inspect</span>
-                          </button>
-                          <button
-                            type="button"
-                            aria-label={`${bc.codeActive ? 'Disable' : 'Enable'} barcode ${bc.shortCode}`}
-                            onClick={() => onToggleBarcodeActive(bc)}
-                            className="px-2.5 py-1.5 bg-[#F8F5EF] hover:bg-[#EFECE6] text-[#292824] border border-[#E6E0D6] rounded-lg text-xs font-semibold cursor-pointer"
-                          >
-                            {bc.codeActive ? 'Disable' : 'Enable'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onHardDeleteBarcode(bc.shortCode)}
-                            aria-label={`Delete barcode ${bc.shortCode}`}
-                            className="p-1.5 text-[#6E6A63] hover:text-red-600 cursor-pointer"
-                          >
-                            <Trash2 className="w-4 h-4 inline" />
-                          </button>
-                        </td>
+                        </span>
+                        <span>·</span>
+                        <span className="font-mono tabular-nums text-[#292824]">
+                          {bc.scanCount.toLocaleString()} / {bc.maxScansLimit.toLocaleString()} scans
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => onPreviewBarcodeLanding(bc.shortCode)}
+                          className="flex-1 min-h-[42px] inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-[#F8F5EF] hover:bg-[#FDF2EC] text-[#D97745] border border-[#E6E0D6] rounded-xl text-xs font-bold cursor-pointer"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>Inspect</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onToggleBarcodeActive(bc)}
+                          className="flex-1 min-h-[42px] px-3 py-2 bg-[#F8F5EF] hover:bg-[#EFECE6] text-[#292824] border border-[#E6E0D6] rounded-xl text-xs font-semibold cursor-pointer"
+                        >
+                          {bc.codeActive ? 'Disable' : 'Enable'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onHardDeleteBarcode(bc.shortCode)}
+                          aria-label={`Delete barcode ${bc.shortCode}`}
+                          className="min-w-[42px] min-h-[42px] flex items-center justify-center bg-[#F8F5EF] text-[#6E6A63] hover:text-red-600 border border-[#E6E0D6] rounded-xl cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-[#EFECE6] text-[11px] font-semibold text-[#6E6A63] bg-[#F8F5EF]">
+                        <th className="py-3.5 px-6">Short Code</th>
+                        <th className="py-3.5 px-4">Campaign Title</th>
+                        <th className="py-3.5 px-4">Owner</th>
+                        <th className="py-3.5 px-4">Type &amp; Routing</th>
+                        <th className="py-3.5 px-4 text-right">Scans / Limit</th>
+                        <th className="py-3.5 px-4">Status</th>
+                        <th className="py-3.5 px-6 text-right">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-[#EFECE6] text-xs">
+                      {filteredBarcodes.map((bc) => (
+                        <tr key={bc.shortCode} className="hover:bg-[#F8F5EF]/60">
+                          <td className="py-3.5 px-6 font-mono font-bold text-[#D97745]">
+                            {bc.shortCode}
+                          </td>
+                          <td className="py-3.5 px-4 font-bold text-[#292824]">{bc.title}</td>
+                          <td className="py-3.5 px-4 text-[#6E6A63]">{bc.ownerEmail}</td>
+                          <td className="py-3.5 px-4 text-[#292824]">
+                            {bc.type} · {bc.redirectMode}
+                          </td>
+                          <td className="py-3.5 px-4 text-right font-mono tabular-nums">
+                            {bc.scanCount.toLocaleString()} / {bc.maxScansLimit.toLocaleString()}
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span
+                              className={`font-bold ${
+                                bc.codeActive && bc.ownerStatus === 'ACTIVE'
+                                  ? 'text-[#2E6B3E]'
+                                  : 'text-red-600'
+                              }`}
+                            >
+                              {bc.ownerStatus === 'SUSPENDED'
+                                ? 'Owner Suspended'
+                                : bc.codeActive
+                                ? 'Active'
+                                : 'Disabled'}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-6 text-right space-x-2 whitespace-nowrap">
+                            <button
+                              type="button"
+                              aria-label={`Inspect barcode ${bc.shortCode}`}
+                              onClick={() => onPreviewBarcodeLanding(bc.shortCode)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-[#F8F5EF] hover:bg-[#FDF2EC] text-[#D97745] border border-[#E6E0D6] rounded-lg text-xs font-bold cursor-pointer"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                              <span>Inspect</span>
+                            </button>
+                            <button
+                              type="button"
+                              aria-label={`${bc.codeActive ? 'Disable' : 'Enable'} barcode ${bc.shortCode}`}
+                              onClick={() => onToggleBarcodeActive(bc)}
+                              className="px-2.5 py-1.5 bg-[#F8F5EF] hover:bg-[#EFECE6] text-[#292824] border border-[#E6E0D6] rounded-lg text-xs font-semibold cursor-pointer"
+                            >
+                              {bc.codeActive ? 'Disable' : 'Enable'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => onHardDeleteBarcode(bc.shortCode)}
+                              aria-label={`Delete barcode ${bc.shortCode}`}
+                              className="p-1.5 text-[#6E6A63] hover:text-red-600 cursor-pointer"
+                            >
+                              <Trash2 className="w-4 h-4 inline" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
 
             {/* Live Plans & Pricing Control Center */}
@@ -830,6 +986,58 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
           </div>
         </main>
       </div>
+
+      {/* Mobile Fixed Bottom Thumb Navigation Bar (64px + safe-area) */}
+      <nav
+        aria-label="Mobile super admin navigation"
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#E6E0D6] pb-safe"
+      >
+        <div className="grid grid-cols-4 items-center h-16 px-1">
+          <button
+            type="button"
+            onClick={() => setActiveTab('SUBSCRIBERS')}
+            className={`flex flex-col items-center justify-center min-h-[48px] gap-1 text-[10px] font-bold transition-colors cursor-pointer ${
+              activeTab === 'SUBSCRIBERS' ? 'text-[#D97745]' : 'text-[#6E6A63]'
+            }`}
+          >
+            <Users className="w-5 h-5" />
+            <span>Users</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('PERMISSIONS')}
+            className={`flex flex-col items-center justify-center min-h-[48px] gap-1 text-[10px] font-bold transition-colors cursor-pointer ${
+              activeTab === 'PERMISSIONS' ? 'text-[#D97745]' : 'text-[#6E6A63]'
+            }`}
+          >
+            <UserPlus className="w-5 h-5" />
+            <span>Invites</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('BARCODES')}
+            className={`flex flex-col items-center justify-center min-h-[48px] gap-1 text-[10px] font-bold transition-colors cursor-pointer ${
+              activeTab === 'BARCODES' ? 'text-[#D97745]' : 'text-[#6E6A63]'
+            }`}
+          >
+            <QrCode className="w-5 h-5" />
+            <span>Codes</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('PLANS')}
+            className={`flex flex-col items-center justify-center min-h-[48px] gap-1 text-[10px] font-bold transition-colors cursor-pointer ${
+              activeTab === 'PLANS' ? 'text-[#D97745]' : 'text-[#6E6A63]'
+            }`}
+          >
+            <Sliders className="w-5 h-5" />
+            <span>Plans</span>
+          </button>
+        </div>
+      </nav>
     </div>
   );
 };

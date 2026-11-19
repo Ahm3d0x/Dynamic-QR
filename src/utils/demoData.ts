@@ -98,10 +98,10 @@ export const INITIAL_DEMO_BARCODES: BarcodeRecord[] = [
     destination: JSON.stringify({
       fullName: 'Ahmed Mohamed',
       jobTitle: 'Business Manager',
-      company: 'QRDynamic Cloud',
+      company: 'Dynamic QR Cloud',
       phone: '+20 123 456 7890',
       email: 'ahmed@company.com',
-      website: 'https://qrdynamic.app',
+      website: 'https://dynamicqr-one.vercel.app',
     }),
     redirectMode: 'LANDING',
     welcomeMessage: 'Connect with Ahmed Mohamed directly on your phone.',
@@ -123,7 +123,7 @@ export const INITIAL_DEMO_BARCODES: BarcodeRecord[] = [
     title: 'Guest WiFi Network',
     type: 'WIFI',
     destination: JSON.stringify({
-      ssid: 'QRDynamic_WiFi',
+      ssid: 'DynamicQR_WiFi',
       password: '12345678',
       encryption: 'WPA',
     }),
@@ -171,7 +171,7 @@ export const INITIAL_DEMO_BARCODES: BarcodeRecord[] = [
     title: 'Downtown Flagship Location',
     type: 'GEO_EVENT',
     destination: JSON.stringify({
-      placeName: 'QRDynamic Roastery & Lounge',
+      placeName: 'Dynamic QR Roastery & Lounge',
       latitude: '30.0444',
       longitude: '31.2357',
       address: '14 Talaat Harb St, Downtown Cairo',

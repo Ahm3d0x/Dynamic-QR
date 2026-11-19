@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import { ContentType, PlanType, SubscriptionPlanConfig } from '../types/qr';
 import { formatPlanPrice, normalizeShortCodeInput } from '../utils/qrLogic';
+import { BrandLogo } from './BrandLogo';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface PublicHomeViewProps {
   planCatalog: Record<PlanType, SubscriptionPlanConfig>;
@@ -77,7 +79,7 @@ const SHOWCASE_TYPES: {
     subtitle: 'Share WiFi network credentials',
     sampleCode: 'QRD-W1F199',
     ctaLabel: 'Copy Wi-Fi Info',
-    previewLine: 'SSID: QRDynamic_WiFi',
+    previewLine: 'SSID: DynamicQR_WiFi',
     icon: Wifi,
   },
   {
@@ -132,13 +134,10 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
     <div className="min-h-screen bg-[#F8F5EF] text-[#292824]">
       {/* Strict 3-Zone Top Bar Contract */}
       <header className="sticky top-0 z-30 bg-[#F8F5EF]/95 backdrop-blur-xs border-b border-[#E6E0D6]">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-8 px-6 py-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 sm:gap-8 px-4 sm:px-6 py-3 sm:py-4">
           {/* Zone 1: Single wordmark */}
-          <a
-            href="#top"
-            className="text-xl font-bold tracking-tight text-[#292824] whitespace-nowrap shrink-0"
-          >
-            QR<span className="text-[#D97745]">Dynamic</span>
+          <a href="#top" className="whitespace-nowrap shrink-0">
+            <BrandLogo size="sm" theme="light" />
           </a>
 
           {/* Zone 2: 4 concise single-line nav links */}
@@ -174,7 +173,7 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
             <button
               type="button"
               onClick={() => setShowSignInModal(true)}
-              className="px-5 py-2.5 text-xs font-bold text-white bg-[#D97745] hover:bg-[#c56737] rounded-xl transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+              className="min-h-[40px] px-4 sm:px-5 py-2 text-xs font-bold text-white bg-[#D97745] hover:bg-[#c56737] rounded-xl transition-colors whitespace-nowrap shrink-0 cursor-pointer"
             >
               Sign In
             </button>
@@ -183,25 +182,25 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
       </header>
 
       {/* Hero Split Section */}
-      <section id="top" className="max-w-7xl mx-auto px-6 pt-12 pb-16">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-          <div className="lg:col-span-7 space-y-6">
+      <section id="top" className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 sm:pt-12 pb-12 sm:pb-16">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
+          <div className="lg:col-span-7 space-y-5 sm:space-y-6">
             <p className="text-xs font-semibold text-[#D97745] tracking-wide">
-              Dynamic QR & Smart Link Management SaaS · من فكرة الطباعة الثابتة إلى التوجيه السحابي
+              Dynamic QR &amp; Smart Link Management · من فكرة الطباعة الثابتة إلى التوجيه السحابي
             </p>
-            <h1 className="text-4xl sm:text-5xl lg:text-[54px] font-bold tracking-tight text-[#292824] leading-[1.12] text-balance">
+            <h1 className="text-3xl sm:text-5xl lg:text-[54px] font-bold tracking-tight text-[#292824] leading-[1.12] text-balance">
               Dynamic QR Codes for a <span className="text-[#D97745]">Smarter</span> World
             </h1>
-            <p className="text-base sm:text-lg text-[#6E6A63] max-w-xl leading-relaxed">
+            <p className="text-sm sm:text-lg text-[#6E6A63] max-w-xl leading-relaxed">
               Create, manage, and update your QR code destinations anytime without reprinting.
               Built with atomic scan limits, 6 dynamic content engines, and cloud analytics.
             </p>
 
-            <div className="flex flex-wrap items-center gap-3 pt-1">
+            <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 pt-1">
               <button
                 type="button"
                 onClick={() => setShowSignInModal(true)}
-                className="inline-flex items-center gap-2 px-6 py-3.5 bg-[#D97745] hover:bg-[#c56737] text-white text-sm font-bold rounded-2xl transition-colors cursor-pointer whitespace-nowrap"
+                className="inline-flex items-center justify-center gap-2 px-5 sm:px-6 py-3.5 min-h-[48px] bg-[#D97745] hover:bg-[#c56737] text-white text-sm font-bold rounded-2xl transition-colors cursor-pointer whitespace-nowrap"
               >
                 <span>Get Started Free</span>
                 <ArrowRight className="w-4 h-4" />
@@ -210,31 +209,33 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
               <button
                 type="button"
                 onClick={onOpenScanner}
-                className="inline-flex items-center gap-2 px-5 py-3.5 bg-[#233229] hover:bg-[#1a261f] text-white text-sm font-bold rounded-2xl transition-colors cursor-pointer whitespace-nowrap"
+                className="inline-flex items-center justify-center gap-2 px-5 py-3.5 min-h-[48px] bg-[#233229] hover:bg-[#1a261f] text-white text-sm font-bold rounded-2xl transition-colors cursor-pointer whitespace-nowrap"
               >
                 <Camera className="w-4 h-4 text-[#D97745]" />
                 <span>QR Scanner</span>
               </button>
+
+              <PWAInstallButton variant="hero" showFallbackGuide />
             </div>
 
             {/* Quick Short ID Lookup Bar inside Hero */}
             <form
               id="lookup"
               onSubmit={handleLookupSubmit}
-              className="max-w-lg bg-white border border-[#E6E0D6] rounded-2xl p-2 flex items-center gap-2 shadow-2xs"
+              className="max-w-lg bg-white border border-[#E6E0D6] rounded-2xl p-1.5 sm:p-2 flex items-center gap-1.5 sm:gap-2 shadow-2xs"
             >
-              <Search className="w-4 h-4 text-[#6E6A63] ml-2.5 shrink-0" />
+              <Search className="w-4 h-4 text-[#6E6A63] ml-2 shrink-0" />
               <input
                 type="text"
                 aria-label="Lookup QR by Short ID"
                 value={shortIdSearch}
                 onChange={(e) => setShortIdSearch(e.target.value)}
-                placeholder="Lookup Short ID (e.g. QRD-8F3K9A or QRD-VC4RD1)..."
-                className="flex-1 bg-transparent text-xs font-mono text-[#292824] focus:outline-none px-2 py-1.5"
+                placeholder="Lookup Short ID (e.g. QRD-8F3K9A)..."
+                className="flex-1 min-w-0 bg-transparent text-xs font-mono text-[#292824] focus:outline-none px-1.5 py-2"
               />
               <button
                 type="submit"
-                className="px-4 py-2 bg-[#F8F5EF] hover:bg-[#FDF2EC] text-[#D97745] border border-[#E6E0D6] rounded-xl text-xs font-bold transition-colors cursor-pointer whitespace-nowrap"
+                className="min-h-[40px] px-3.5 sm:px-4 py-2 bg-[#F8F5EF] hover:bg-[#FDF2EC] text-[#D97745] border border-[#E6E0D6] rounded-xl text-xs font-bold transition-colors cursor-pointer whitespace-nowrap shrink-0"
               >
                 Inspect QR
               </button>
@@ -243,7 +244,7 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
 
           {/* Right Hero Visual Card */}
           <div className="lg:col-span-5">
-            <div className="bg-white border border-[#E6E0D6] rounded-3xl p-8 shadow-sm relative">
+            <div className="bg-white border border-[#E6E0D6] rounded-3xl p-6 sm:p-8 shadow-sm relative">
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <span className="text-xs font-semibold text-[#6E6A63] block">
@@ -530,32 +531,36 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-[#E6E0D6] py-8 px-6 text-center text-xs text-[#6E6A63]">
+      <footer className="border-t border-[#E6E0D6] py-8 px-4 sm:px-6 text-center text-xs text-[#6E6A63]">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <span>
-            <strong className="text-[#292824]">QR</strong>
-            <strong className="text-[#D97745]">Dynamic</strong> — Dynamic QR & Smart Link Management SaaS
+          <span className="inline-flex items-center gap-2">
+            <img src="/icon.svg" alt="Dynamic QR" className="w-5 h-5 rounded-md" />
+            <span>
+              <strong className="text-[#292824]">Dynamic </strong>
+              <strong className="text-[#D97745]">QR</strong> — Smart Link &amp; QR Code Management
+            </span>
           </span>
           <span>Simple. Powerful. Dynamic.</span>
         </div>
       </footer>
 
-      {/* Clean Google Sign-In Modal — No mention of Super Admin or Role Preview */}
+      {/* Clean Google Sign-In Modal — Bottom Sheet on Mobile, Centered Card on Desktop */}
       {showSignInModal && (
         <div
-          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="welcome-back-title"
+          onClick={() => setShowSignInModal(false)}
         >
-          <div className="bg-white border border-[#E6E0D6] rounded-3xl max-w-md w-full p-8 text-center shadow-xl relative">
-            <div className="flex items-center justify-center gap-2 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-[#D97745] text-white flex items-center justify-center">
-                <QrCode className="w-5 h-5" />
-              </div>
-              <span className="text-xl font-bold text-[#292824]">
-                QR<span className="text-[#D97745]">Dynamic</span>
-              </span>
+          <div
+            className="bg-white border border-[#E6E0D6] rounded-t-3xl sm:rounded-3xl max-w-md w-full p-6 sm:p-8 pb-8 text-center shadow-xl relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-10 h-1.5 bg-[#E6E0D6] rounded-full mx-auto mb-5 sm:hidden" />
+
+            <div className="flex items-center justify-center mb-4">
+              <BrandLogo size="md" theme="light" />
             </div>
 
             <h2 id="welcome-back-title" className="text-2xl font-bold text-[#292824]">
@@ -569,17 +574,17 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
               type="button"
               disabled={isSigningIn}
               onClick={handleGoogleClick}
-              className="w-full flex items-center justify-center gap-3 py-3.5 px-5 bg-[#D97745] hover:bg-[#c56737] text-white rounded-2xl text-sm font-bold transition-colors cursor-pointer disabled:opacity-60"
+              className="w-full min-h-[48px] flex items-center justify-center gap-3 py-3.5 px-5 bg-[#D97745] hover:bg-[#c56737] text-white rounded-2xl text-sm font-bold transition-colors cursor-pointer disabled:opacity-60"
             >
               <Globe className="w-4 h-4" />
               <span>{isSigningIn ? 'Connecting to Google...' : 'Continue with Google'}</span>
             </button>
 
-            <div className="my-6 p-5 bg-[#F8F5EF] border border-[#E6E0D6] rounded-2xl flex flex-col items-center">
+            <div className="my-5 sm:my-6 p-4 sm:p-5 bg-[#F8F5EF] border border-[#E6E0D6] rounded-2xl flex flex-col items-center">
               <div className="bg-white p-3 rounded-xl border border-[#E6E0D6] mb-2">
                 <QRCodeSVG
                   value="https://dynamicqr-one.vercel.app"
-                  size={88}
+                  size={84}
                   fgColor="#292824"
                   bgColor="#FFFFFF"
                 />
@@ -598,7 +603,7 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
             <button
               type="button"
               onClick={() => setShowSignInModal(false)}
-              className="mt-4 text-xs font-semibold text-[#6E6A63] hover:text-[#292824] cursor-pointer"
+              className="mt-3 min-h-[40px] px-4 text-xs font-semibold text-[#6E6A63] hover:text-[#292824] cursor-pointer"
             >
               Cancel and return to homepage
             </button>

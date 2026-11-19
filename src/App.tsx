@@ -63,6 +63,7 @@ import { PrintStudioModal } from './components/PrintStudioModal';
 import { ScannerModal } from './components/ScannerModal';
 import { PlanManagerModal } from './components/PlanManagerModal';
 import { EditPlanModal } from './components/EditPlanModal';
+import { OfflineIndicator } from './components/OfflineIndicator';
 
 type ViewMode = 'HOME' | 'ADMIN' | 'SUPER_ADMIN' | 'REDIRECT';
 
@@ -205,8 +206,8 @@ export default function App() {
 
           const newProfile: UserProfile = {
             uid: fbUser.uid,
-            name: (fbUser.displayName || 'QRDynamic User').slice(0, 100),
-            email: (fbUser.email || 'user@qrdynamic.app').slice(0, 200),
+            name: (fbUser.displayName || 'Dynamic QR User').slice(0, 100),
+            email: (fbUser.email || 'user@dynamicqr.app').slice(0, 200),
             role: assignedRole,
             status: 'ACTIVE',
             plan: assignedPlan,
@@ -984,6 +985,8 @@ export default function App() {
         onClose={() => setEditingPlanConfig(null)}
         onSavePlan={handleSaveSubscriptionPlan}
       />
+
+      <OfflineIndicator />
     </ErrorBoundary>
   );
 }

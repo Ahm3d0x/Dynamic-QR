@@ -86,13 +86,13 @@ export const CreateEditQRModal: React.FC<CreateEditQRModalProps> = ({
   const [vcard, setVcard] = useState<VCardData>({
     fullName: 'Ahmed Mohamed',
     jobTitle: 'Business Manager',
-    company: 'QRDynamic',
+    company: 'Dynamic QR',
     phone: '+20 123 456 7890',
     email: 'ahmed@company.com',
-    website: 'https://qrdynamic.app',
+    website: 'https://dynamicqr-one.vercel.app',
   });
   const [wifi, setWifi] = useState<WifiData>({
-    ssid: 'QRDynamic_WiFi',
+    ssid: 'DynamicQR_WiFi',
     password: '12345678',
     encryption: 'WPA',
   });
@@ -838,11 +838,11 @@ export const CreateEditQRModal: React.FC<CreateEditQRModalProps> = ({
                 <div className="p-4 rounded-xl bg-[#F8F5EF] border border-[#E6E0D6] flex items-center justify-between">
                   <div>
                     <span className="text-xs font-bold text-[#292824] block">
-                      8. White-Label (Hide QRDynamic Branding)
+                      8. White-Label (Hide Dynamic QR Branding)
                     </span>
                     <span className="text-[11px] text-[#6E6A63]">
                       {user.allowWhiteLabel
-                        ? 'Remove "Powered by QRDynamic" footer on Smart Landing pages'
+                        ? 'Remove "Powered by Dynamic QR" footer on Smart Landing pages'
                         : 'Upgrade to Pro or Enterprise to unlock White-Label branding'}
                     </span>
                   </div>

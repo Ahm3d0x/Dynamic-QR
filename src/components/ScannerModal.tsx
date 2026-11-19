@@ -55,7 +55,7 @@ export const ScannerModal: React.FC<ScannerModalProps> = ({
         videoRef.current.setAttribute('playsinline', 'true');
         await videoRef.current.play();
         setCameraActive(true);
-        setStatusMsg('Point your camera at a QRDynamic code...');
+        setStatusMsg('Point your camera at a Dynamic QR code...');
         tickScan();
       }
     } catch {

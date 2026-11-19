@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Crown, X, Check } from 'lucide-react';
-import { AccountStatus, PlanType, UserProfile, UserRole } from '../types/qr';
+import { AccountStatus, PlanType, SubscriptionPlanConfig, UserProfile, UserRole } from '../types/qr';
 import { clampRedirectDelay, getPlanDefaults } from '../utils/qrLogic';
 
 interface PlanManagerModalProps {
   subscriber: UserProfile | null;
+  planCatalog: Record<PlanType, SubscriptionPlanConfig>;
   onClose: () => void;
   onSaveSubscriber: (
     uid: string,
@@ -24,6 +25,7 @@ interface PlanManagerModalProps {
 
 export const PlanManagerModal: React.FC<PlanManagerModalProps> = ({
   subscriber,
+  planCatalog,
   onClose,
   onSaveSubscriber,
 }) => {
@@ -47,18 +49,18 @@ export const PlanManagerModal: React.FC<PlanManagerModalProps> = ({
     setDefaultRedirectDelaySeconds(
       typeof subscriber.defaultRedirectDelaySeconds === 'number'
         ? clampRedirectDelay(subscriber.defaultRedirectDelaySeconds)
-        : getPlanDefaults(subscriber.plan).defaultRedirectDelaySeconds
+        : getPlanDefaults(subscriber.plan, planCatalog).defaultRedirectDelaySeconds
     );
     setStatus(subscriber.status);
     setRole(subscriber.role);
-  }, [subscriber]);
+  }, [subscriber, planCatalog]);
 
   if (!subscriber) return null;
 
   const handlePlanChange = (newPlan: PlanType) => {
     setPlan(newPlan);
     if (newPlan !== 'CUSTOM') {
-      const defaults = getPlanDefaults(newPlan);
+      const defaults = getPlanDefaults(newPlan, planCatalog);
       setMaxBarcodes(defaults.maxBarcodes);
       setMaxScansPerBarcode(defaults.maxScansPerBarcode);
       setAllowDirectRedirect(defaults.allowDirectRedirect);

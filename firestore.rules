@@ -145,6 +145,43 @@ service cloud.firestore {
       data.createdAt is timestamp;
     }
 
+    // Validation Blueprint: SubscriptionPlan
+    function isValidSubscriptionPlan(data) {
+      return data.keys().hasAll([
+        'plan', 'label', 'tagline', 'priceMonthly', 'priceYearly', 'currency',
+        'billingNote', 'maxBarcodes', 'maxScansPerBarcode', 'allowDirectRedirect',
+        'allowWhiteLabel', 'defaultRedirectDelaySeconds', 'features',
+        'isHighlighted', 'isVisible', 'ctaLabel', 'contactNote', 'sortOrder', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'plan', 'label', 'tagline', 'priceMonthly', 'priceYearly', 'currency',
+        'billingNote', 'maxBarcodes', 'maxScansPerBarcode', 'allowDirectRedirect',
+        'allowWhiteLabel', 'defaultRedirectDelaySeconds', 'features',
+        'isHighlighted', 'isVisible', 'ctaLabel', 'contactNote', 'sortOrder', 'updatedAt'
+      ]) &&
+      data.plan is string && data.plan.size() <= 20 && (
+        data.plan == 'FREE' || data.plan == 'PRO' || data.plan == 'ENTERPRISE' || data.plan == 'CUSTOM'
+      ) &&
+      data.label is string && data.label.size() >= 1 && data.label.size() <= 60 &&
+      data.tagline is string && data.tagline.size() >= 1 && data.tagline.size() <= 160 &&
+      data.priceMonthly is number && data.priceMonthly >= 0 && data.priceMonthly <= 100000 &&
+      data.priceYearly is number && data.priceYearly >= 0 && data.priceYearly <= 1000000 &&
+      data.currency is string && data.currency.size() >= 1 && data.currency.size() <= 10 &&
+      data.billingNote is string && data.billingNote.size() <= 80 &&
+      data.maxBarcodes is number && data.maxBarcodes >= 0 && data.maxBarcodes <= 1000000 &&
+      data.maxScansPerBarcode is number && data.maxScansPerBarcode >= 1 && data.maxScansPerBarcode <= 100000000 &&
+      data.allowDirectRedirect is bool &&
+      data.allowWhiteLabel is bool &&
+      data.defaultRedirectDelaySeconds is number && data.defaultRedirectDelaySeconds >= 0 && data.defaultRedirectDelaySeconds <= 30 &&
+      data.features is list && data.features.size() <= 12 &&
+      data.isHighlighted is bool &&
+      data.isVisible is bool &&
+      data.ctaLabel is string && data.ctaLabel.size() >= 1 && data.ctaLabel.size() <= 60 &&
+      data.contactNote is string && data.contactNote.size() <= 200 &&
+      data.sortOrder is number && data.sortOrder >= 0 && data.sortOrder <= 20 &&
+      data.updatedAt is timestamp;
+    }
+
     // Collection: users
     match /users/{userId} {
       allow get: if isValidId(userId) && (isOwner(userId) || isSuperAdmin());
@@ -303,6 +340,17 @@ service cloud.firestore {
         isSuperAdmin() ||
         (isSignedIn() && resource.data.email == request.auth.token.email)
       );
+    }
+
+    // Collection: subscriptionPlans (Publicly readable pricing catalog; writable exclusively by Super Admins)
+    match /subscriptionPlans/{planId} {
+      allow get, list: if true;
+      allow create, update: if isValidId(planId) &&
+        isValidSubscriptionPlan(incoming()) &&
+        incoming().plan == planId &&
+        incoming().updatedAt == request.time &&
+        isSuperAdmin();
+      allow delete: if false;
     }
   }
 }

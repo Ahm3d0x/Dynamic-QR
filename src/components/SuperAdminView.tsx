@@ -4,7 +4,10 @@ import {
   ArrowLeft,
   Check,
   Crown,
+  Edit3,
   ExternalLink,
+  Eye,
+  EyeOff,
   LogOut,
   MailPlus,
   QrCode,
@@ -18,18 +21,21 @@ import {
 import {
   BarcodeRecord,
   PlanType,
+  SubscriptionPlanConfig,
   SuperAdminInviteRecord,
   UserProfile,
   UserRole,
 } from '../types/qr';
-import { PLAN_CATALOG } from '../utils/qrLogic';
+import { formatPlanPrice } from '../utils/qrLogic';
 
 interface SuperAdminViewProps {
   currentUser: UserProfile;
   users: UserProfile[];
   barcodes: BarcodeRecord[];
   invites: SuperAdminInviteRecord[];
+  planCatalog: Record<PlanType, SubscriptionPlanConfig>;
   onOpenPlanManager: (subscriber: UserProfile) => void;
+  onOpenEditPlan: (planConfig: SubscriptionPlanConfig) => void;
   onToggleSubscriberStatus: (subscriber: UserProfile) => Promise<void>;
   onGrantEmailPermission: (email: string, role: UserRole, plan: PlanType) => Promise<void>;
   onRevokeInvite: (inviteId: string) => Promise<void>;
@@ -45,7 +51,9 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
   users,
   barcodes,
   invites,
+  planCatalog,
   onOpenPlanManager,
+  onOpenEditPlan,
   onToggleSubscriberStatus,
   onGrantEmailPermission,
   onRevokeInvite,
@@ -667,44 +675,156 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
               </div>
             )}
 
-            {/* Plans Reference Matrix */}
+            {/* Live Plans & Pricing Control Center */}
             {activeTab === 'PLANS' && (
-              <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {(['FREE', 'PRO', 'ENTERPRISE', 'CUSTOM'] as const).map((pKey) => {
-                  const p = PLAN_CATALOG[pKey];
-                  return (
-                    <div
-                      key={pKey}
-                      className="bg-[#F8F5EF] border border-[#E6E0D6] rounded-2xl p-5 space-y-2 text-xs"
-                    >
-                      <span className="font-bold text-[#D97745]">{p.plan}</span>
-                      <h3 className="text-base font-bold text-[#292824]">{p.label}</h3>
-                      <p className="text-[#6E6A63]">{p.tagline}</p>
-                      <div className="pt-3 border-t border-[#E6E0D6] space-y-1.5">
-                        <div className="flex justify-between">
-                          <span>Max Barcodes:</span>
-                          <strong className="font-mono tabular-nums">
-                            {p.maxBarcodes.toLocaleString()}
-                          </strong>
+              <div className="p-6 space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-base font-bold text-[#292824]">
+                      Live Subscription Plans & Pricing Control
+                    </h2>
+                    <p className="text-xs text-[#6E6A63]">
+                      Edit prices, quotas, auto-redirect timers, and features here — every change
+                      updates live on all Admin Plans pages and Public Pricing.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {(['FREE', 'PRO', 'ENTERPRISE', 'CUSTOM'] as const).map((pKey) => {
+                    const p = planCatalog[pKey];
+                    const monthly = formatPlanPrice(p, 'MONTHLY');
+                    const yearly = formatPlanPrice(p, 'YEARLY');
+                    const subsCount = users.filter((u) => u.plan === pKey).length;
+
+                    return (
+                      <div
+                        key={pKey}
+                        className={`rounded-2xl p-5 border flex flex-col justify-between gap-4 text-xs ${
+                          p.isHighlighted
+                            ? 'bg-[#233229] text-white border-[#233229]'
+                            : 'bg-[#F8F5EF] text-[#292824] border-[#E6E0D6]'
+                        }`}
+                      >
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-bold text-[#D97745]">{p.plan}</span>
+                            <span
+                              className={`inline-flex items-center gap-1 text-[11px] font-semibold ${
+                                p.isVisible
+                                  ? p.isHighlighted
+                                    ? 'text-[#DCE9DD]'
+                                    : 'text-[#2E6B3E]'
+                                  : 'text-red-500'
+                              }`}
+                            >
+                              {p.isVisible ? (
+                                <>
+                                  <Eye className="w-3.5 h-3.5" />
+                                  <span>Visible</span>
+                                </>
+                              ) : (
+                                <>
+                                  <EyeOff className="w-3.5 h-3.5" />
+                                  <span>Hidden</span>
+                                </>
+                              )}
+                            </span>
+                          </div>
+
+                          <div>
+                            <h3 className="text-base font-bold">{p.label}</h3>
+                            <p
+                              className={`text-[11px] mt-0.5 ${
+                                p.isHighlighted ? 'text-[#E6E0D6]' : 'text-[#6E6A63]'
+                              }`}
+                            >
+                              {p.tagline}
+                            </p>
+                          </div>
+
+                          <div className="pt-2 border-t border-current/10">
+                            <div className="flex items-baseline gap-1.5">
+                              <span className="text-2xl font-bold font-mono tabular-nums">
+                                {monthly.amountText}
+                              </span>
+                              <span className="text-[11px] opacity-75">{monthly.suffix}</span>
+                            </div>
+                            {p.priceYearly > 0 && (
+                              <span className="text-[11px] opacity-75 font-mono tabular-nums block mt-0.5">
+                                Yearly: {yearly.amountText} {yearly.suffix}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="pt-2 border-t border-current/10 space-y-1.5">
+                            <div className="flex justify-between">
+                              <span className="opacity-75">Max Codes:</span>
+                              <strong className="font-mono tabular-nums">
+                                {p.maxBarcodes.toLocaleString()}
+                              </strong>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="opacity-75">Max Scans/Code:</span>
+                              <strong className="font-mono tabular-nums">
+                                {p.maxScansPerBarcode.toLocaleString()}
+                              </strong>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="opacity-75">Auto-Redirect:</span>
+                              <strong className="font-mono tabular-nums">
+                                {p.defaultRedirectDelaySeconds === 0
+                                  ? 'Instant (0s)'
+                                  : `${p.defaultRedirectDelaySeconds}s`}
+                              </strong>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="opacity-75">Direct / White-Label:</span>
+                              <strong>
+                                {p.allowDirectRedirect ? 'Yes' : 'No'} ·{' '}
+                                {p.allowWhiteLabel ? 'Yes' : 'No'}
+                              </strong>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="opacity-75">Active Users:</span>
+                              <strong className="font-mono tabular-nums">{subsCount}</strong>
+                            </div>
+                          </div>
+
+                          {p.features.length > 0 && (
+                            <ul className="pt-2 border-t border-current/10 space-y-1">
+                              {p.features.slice(0, 4).map((f, i) => (
+                                <li key={i} className="flex items-start gap-1.5 text-[11px]">
+                                  <Check className="w-3.5 h-3.5 text-[#D97745] shrink-0 mt-0.5" />
+                                  <span className="opacity-90">{f}</span>
+                                </li>
+                              ))}
+                              {p.features.length > 4 && (
+                                <li className="text-[11px] opacity-70 pl-5">
+                                  +{p.features.length - 4} more features
+                                </li>
+                              )}
+                            </ul>
+                          )}
                         </div>
-                        <div className="flex justify-between">
-                          <span>Max Scans/Code:</span>
-                          <strong className="font-mono tabular-nums">
-                            {p.maxScansPerBarcode.toLocaleString()}
-                          </strong>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Direct Redirect:</span>
-                          <strong>{p.allowDirectRedirect ? 'Yes' : 'No'}</strong>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>White-Label:</span>
-                          <strong>{p.allowWhiteLabel ? 'Yes' : 'No'}</strong>
-                        </div>
+
+                        <button
+                          type="button"
+                          aria-label={`Edit ${p.plan} plan`}
+                          onClick={() => onOpenEditPlan(p)}
+                          className={`w-full inline-flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+                            p.isHighlighted
+                              ? 'bg-[#D97745] hover:bg-[#c56737] text-white'
+                              : 'bg-white hover:bg-[#FDF2EC] text-[#292824] hover:text-[#D97745] border border-[#E6E0D6]'
+                          }`}
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                          <span>Edit Plan & Pricing</span>
+                        </button>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>

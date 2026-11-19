@@ -36,6 +36,7 @@ import {
   BarcodeRecord,
   PlanType,
   ScanLogRecord,
+  SubscriptionPlanConfig,
   SuperAdminInviteRecord,
   UserProfile,
   UserRole,
@@ -46,7 +47,12 @@ import {
   INITIAL_DEMO_SCAN_LOGS,
   INITIAL_DEMO_USERS,
 } from './utils/demoData';
-import { getPlanDefaults, normalizeShortCodeInput } from './utils/qrLogic';
+import {
+  getPlanDefaults,
+  normalizeShortCodeInput,
+  PLAN_CATALOG,
+  sanitizeSubscriptionPlan,
+} from './utils/qrLogic';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PublicHomeView } from './components/PublicHomeView';
 import { AdminDashboardView } from './components/AdminDashboardView';
@@ -56,6 +62,7 @@ import { CreateEditQRModal } from './components/CreateEditQRModal';
 import { PrintStudioModal } from './components/PrintStudioModal';
 import { ScannerModal } from './components/ScannerModal';
 import { PlanManagerModal } from './components/PlanManagerModal';
+import { EditPlanModal } from './components/EditPlanModal';
 
 type ViewMode = 'HOME' | 'ADMIN' | 'SUPER_ADMIN' | 'REDIRECT';
 
@@ -68,9 +75,34 @@ function emailToInviteDocId(email: string): string {
     .replace(/[^a-z0-9_-]/g, '_');
 }
 
+function getInitialRoute(): { viewMode: ViewMode; shortCode: string } {
+  if (typeof window === 'undefined') {
+    return { viewMode: 'HOME', shortCode: '' };
+  }
+  const path = window.location.pathname;
+  const params = new URLSearchParams(window.location.search);
+  const rMatch = path.match(/^\/r\/([A-Za-z0-9_-]+)/);
+
+  if (rMatch && rMatch[1]) {
+    return { viewMode: 'REDIRECT', shortCode: normalizeShortCodeInput(rMatch[1]) };
+  }
+
+  const queryCode = params.get('r') || params.get('id');
+  if (queryCode) {
+    return { viewMode: 'REDIRECT', shortCode: normalizeShortCodeInput(queryCode) };
+  }
+
+  if (params.get('autostart') === '1') {
+    return { viewMode: 'ADMIN', shortCode: '' };
+  }
+
+  return { viewMode: 'HOME', shortCode: '' };
+}
+
 export default function App() {
-  const [viewMode, setViewMode] = useState<ViewMode>('HOME');
-  const [activeShortCode, setActiveShortCode] = useState<string>('');
+  const initialRoute = getInitialRoute();
+  const [viewMode, setViewMode] = useState<ViewMode>(initialRoute.viewMode);
+  const [activeShortCode, setActiveShortCode] = useState<string>(initialRoute.shortCode);
   const [isFirebaseAuthed, setIsFirebaseAuthed] = useState<boolean>(false);
 
   // State for users, barcodes, scanLogs, invites
@@ -79,7 +111,10 @@ export default function App() {
   const [barcodes, setBarcodes] = useState<BarcodeRecord[]>(INITIAL_DEMO_BARCODES);
   const [scanLogs, setScanLogs] = useState<ScanLogRecord[]>(INITIAL_DEMO_SCAN_LOGS);
   const [invites, setInvites] = useState<SuperAdminInviteRecord[]>([]);
+  const [planCatalog, setPlanCatalog] =
+    useState<Record<PlanType, SubscriptionPlanConfig>>(PLAN_CATALOG);
   const [remoteRedirectBarcode, setRemoteRedirectBarcode] = useState<BarcodeRecord | null>(null);
+  const [remoteResolvedCode, setRemoteResolvedCode] = useState<string | null>(null);
 
   // Modal states
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -87,6 +122,44 @@ export default function App() {
   const [printingBarcode, setPrintingBarcode] = useState<BarcodeRecord | null>(null);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [managingSubscriber, setManagingSubscriber] = useState<UserProfile | null>(null);
+  const [editingPlanConfig, setEditingPlanConfig] = useState<SubscriptionPlanConfig | null>(null);
+
+  // Real-time listener for public subscriptionPlans catalog (updated by Super Admin)
+  useEffect(() => {
+    const unsubPlans = onSnapshot(
+      collection(db, 'subscriptionPlans'),
+      (snapshot) => {
+        if (snapshot.empty) return;
+        setPlanCatalog((prev) => {
+          const next: Record<PlanType, SubscriptionPlanConfig> = { ...prev };
+          snapshot.forEach((docSnap) => {
+            const data = docSnap.data() as SubscriptionPlanConfig;
+            if (
+              data &&
+              (data.plan === 'FREE' ||
+                data.plan === 'PRO' ||
+                data.plan === 'ENTERPRISE' ||
+                data.plan === 'CUSTOM')
+            ) {
+              next[data.plan] = {
+                ...PLAN_CATALOG[data.plan],
+                ...data,
+                features: Array.isArray(data.features)
+                  ? data.features
+                  : PLAN_CATALOG[data.plan].features,
+              };
+            }
+          });
+          return next;
+        });
+      },
+      () => {
+        // Fallback smoothly to default PLAN_CATALOG if offline
+      }
+    );
+
+    return () => unsubPlans();
+  }, []);
 
   // Check any pending OAuth redirect result on startup (for mobile or popup-blocked browsers)
   useEffect(() => {
@@ -95,34 +168,14 @@ export default function App() {
     });
   }, []);
 
-  // Inspect URL path or query parameters on boot (e.g. /r/QRD-8F3K9A or ?autostart=1)
+  // Keep state in sync on browser Back/Forward navigation
   useEffect(() => {
     const handleRouteSync = () => {
-      const path = window.location.pathname;
-      const params = new URLSearchParams(window.location.search);
-      const rMatch = path.match(/^\/r\/([A-Za-z0-9_-]+)/);
-
-      if (rMatch && rMatch[1]) {
-        const code = normalizeShortCodeInput(rMatch[1]);
-        setActiveShortCode(code);
-        setViewMode('REDIRECT');
-        return;
-      }
-
-      const queryCode = params.get('r') || params.get('id');
-      if (queryCode) {
-        const code = normalizeShortCodeInput(queryCode);
-        setActiveShortCode(code);
-        setViewMode('REDIRECT');
-        return;
-      }
-
-      if (params.get('autostart') === '1') {
-        setViewMode('ADMIN');
-      }
+      const next = getInitialRoute();
+      setActiveShortCode(next.shortCode);
+      setViewMode(next.viewMode);
     };
 
-    handleRouteSync();
     window.addEventListener('popstate', handleRouteSync);
     return () => window.removeEventListener('popstate', handleRouteSync);
   }, []);
@@ -305,6 +358,7 @@ export default function App() {
     const localFound = barcodes.find((b) => b.shortCode === activeShortCode);
     if (localFound) {
       setRemoteRedirectBarcode(null);
+      setRemoteResolvedCode(activeShortCode);
       return;
     }
 
@@ -312,11 +366,21 @@ export default function App() {
     async function fetchRemoteCode() {
       try {
         const docSnap = await getDoc(doc(db, 'barcodes', activeShortCode));
-        if (!cancelled && docSnap.exists()) {
-          setRemoteRedirectBarcode(docSnap.data() as BarcodeRecord);
+        if (!cancelled) {
+          if (docSnap.exists()) {
+            setRemoteRedirectBarcode(docSnap.data() as BarcodeRecord);
+          } else {
+            setRemoteRedirectBarcode(null);
+          }
         }
       } catch {
-        // Ignore offline/not found
+        if (!cancelled) {
+          setRemoteRedirectBarcode(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setRemoteResolvedCode(activeShortCode);
+        }
       }
     }
     fetchRemoteCode();
@@ -644,6 +708,49 @@ export default function App() {
     }
   };
 
+  // Super Admin: Edit & Publish Global Subscription Plan Configuration
+  const handleSaveSubscriptionPlan = async (
+    updatedPlan: SubscriptionPlanConfig,
+    syncExistingSubscribers: boolean
+  ) => {
+    const sanitized = sanitizeSubscriptionPlan(updatedPlan);
+
+    setPlanCatalog((prev) => ({
+      ...prev,
+      [sanitized.plan]: sanitized,
+    }));
+
+    if (isFirebaseAuthed && auth.currentUser) {
+      const planPath = `subscriptionPlans/${sanitized.plan}`;
+      try {
+        await setDoc(doc(db, 'subscriptionPlans', sanitized.plan), {
+          ...sanitized,
+          updatedAt: serverTimestamp(),
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, planPath);
+      }
+    }
+
+    if (syncExistingSubscribers) {
+      const affectedUsers = users.filter((u) => u.plan === sanitized.plan);
+      await Promise.all(
+        affectedUsers.map((sub) =>
+          handleSaveSubscriberPlan(sub.uid, {
+            plan: sanitized.plan,
+            maxBarcodes: sanitized.maxBarcodes,
+            maxScansPerBarcode: sanitized.maxScansPerBarcode,
+            allowDirectRedirect: sanitized.allowDirectRedirect,
+            allowWhiteLabel: sanitized.allowWhiteLabel,
+            defaultRedirectDelaySeconds: sanitized.defaultRedirectDelaySeconds,
+            status: sub.status,
+            role: sub.role,
+          })
+        )
+      );
+    }
+  };
+
   // Super Admin: Grant Email Permission or Invite New Admin/Super Admin
   const handleGrantEmailPermission = async (
     email: string,
@@ -651,7 +758,7 @@ export default function App() {
     plan: PlanType
   ) => {
     const cleanedEmail = email.trim().toLowerCase();
-    const defaults = getPlanDefaults(plan);
+    const defaults = getPlanDefaults(plan, planCatalog);
 
     // 1. If the user already exists in `users`, upgrade their role and plan immediately
     const existingUser = users.find(
@@ -755,13 +862,21 @@ export default function App() {
     setViewMode('HOME');
   };
 
-  const activeRedirectBarcode =
-    barcodes.find((b) => b.shortCode === activeShortCode) || remoteRedirectBarcode;
+  const localRedirectBarcode = barcodes.find((b) => b.shortCode === activeShortCode);
+  const matchedRemoteBarcode =
+    remoteRedirectBarcode?.shortCode === activeShortCode ? remoteRedirectBarcode : null;
+  const activeRedirectBarcode = localRedirectBarcode || matchedRemoteBarcode;
+  const isRedirectLoading =
+    viewMode === 'REDIRECT' &&
+    Boolean(activeShortCode) &&
+    !activeRedirectBarcode &&
+    remoteResolvedCode !== activeShortCode;
 
   return (
     <ErrorBoundary>
       {viewMode === 'HOME' && (
         <PublicHomeView
+          planCatalog={planCatalog}
           onGoogleLogin={handleGoogleLogin}
           onOpenScanner={() => setScannerOpen(true)}
           onResolveShortCode={navigateToRedirect}
@@ -773,6 +888,7 @@ export default function App() {
           user={currentUser}
           barcodes={barcodes}
           scanLogs={scanLogs.filter((l) => l.ownerId === currentUser.uid)}
+          planCatalog={planCatalog}
           onOpenCreateModal={() => {
             setEditingBarcode(null);
             setCreateModalOpen(true);
@@ -803,7 +919,9 @@ export default function App() {
           users={users}
           barcodes={barcodes}
           invites={invites}
+          planCatalog={planCatalog}
           onOpenPlanManager={(sub) => setManagingSubscriber(sub)}
+          onOpenEditPlan={(planCfg) => setEditingPlanConfig(planCfg)}
           onToggleSubscriberStatus={handleToggleSubscriberStatus}
           onGrantEmailPermission={handleGrantEmailPermission}
           onRevokeInvite={handleRevokeInvite}
@@ -819,6 +937,7 @@ export default function App() {
         <SmartRedirectView
           shortCode={activeShortCode}
           barcode={activeRedirectBarcode}
+          isLoading={isRedirectLoading}
           onRegisterAtomicScan={handleRegisterAtomicScan}
           onExitToHome={exitRedirectToWorkspace}
         />
@@ -850,8 +969,20 @@ export default function App() {
 
       <PlanManagerModal
         subscriber={managingSubscriber}
+        planCatalog={planCatalog}
         onClose={() => setManagingSubscriber(null)}
         onSaveSubscriber={handleSaveSubscriberPlan}
+      />
+
+      <EditPlanModal
+        planConfig={editingPlanConfig}
+        subscribersOnPlanCount={
+          editingPlanConfig
+            ? users.filter((u) => u.plan === editingPlanConfig.plan).length
+            : 0
+        }
+        onClose={() => setEditingPlanConfig(null)}
+        onSavePlan={handleSaveSubscriptionPlan}
       />
     </ErrorBoundary>
   );

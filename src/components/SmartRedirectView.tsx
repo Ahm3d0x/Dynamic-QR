@@ -10,6 +10,7 @@ import {
   ExternalLink,
   Gift,
   Globe,
+  Loader2,
   Mail,
   MapPin,
   PauseCircle,
@@ -35,6 +36,7 @@ import {
 interface SmartRedirectViewProps {
   shortCode: string;
   barcode: BarcodeRecord | null | undefined;
+  isLoading?: boolean;
   onRegisterAtomicScan: (shortCode: string) => Promise<void>;
   onExitToHome: () => void;
 }
@@ -42,6 +44,7 @@ interface SmartRedirectViewProps {
 export const SmartRedirectView: React.FC<SmartRedirectViewProps> = ({
   shortCode,
   barcode,
+  isLoading = false,
   onRegisterAtomicScan,
   onExitToHome,
 }) => {
@@ -149,6 +152,49 @@ export const SmartRedirectView: React.FC<SmartRedirectViewProps> = ({
     link.click();
     URL.revokeObjectURL(url);
   };
+
+  // Loading state while fetching QR record from Cloud Firestore
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#F8F5EF] text-[#292824] flex flex-col justify-between p-6">
+        <header className="max-w-4xl w-full mx-auto flex items-center justify-between">
+          <button
+            type="button"
+            onClick={onExitToHome}
+            className="inline-flex items-center gap-2 text-sm font-bold text-[#292824] cursor-pointer"
+          >
+            <div className="w-8 h-8 rounded-lg bg-[#D97745] text-white flex items-center justify-center">
+              <QrCode className="w-4 h-4" />
+            </div>
+            <span>
+              QR<span className="text-[#D97745]">Dynamic</span>
+            </span>
+          </button>
+        </header>
+
+        <main className="max-w-md w-full mx-auto my-12 bg-white border border-[#E6E0D6] rounded-3xl p-8 text-center shadow-sm space-y-4">
+          <div className="w-14 h-14 rounded-2xl bg-[#FDF2EC] text-[#D97745] flex items-center justify-center mx-auto">
+            <Loader2 className="w-7 h-7 animate-spin" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-[#292824]">Loading Smart Link...</h1>
+            <p className="text-xs text-[#6E6A63] mt-1">
+              Verifying destination for{' '}
+              <span className="font-mono font-semibold text-[#292824]">{shortCode}</span>
+            </p>
+          </div>
+          <div className="w-full h-1.5 bg-[#EFECE6] rounded-full overflow-hidden">
+            <div className="w-1/2 h-full bg-[#D97745] rounded-full animate-pulse" />
+          </div>
+        </main>
+
+        <footer className="text-center text-xs text-[#6E6A63]">
+          Powered by <strong className="text-[#292824]">QR</strong>
+          <strong className="text-[#D97745]">Dynamic</strong>
+        </footer>
+      </div>
+    );
+  }
 
   // Error states rendering
   if (validation.status !== 'OK') {

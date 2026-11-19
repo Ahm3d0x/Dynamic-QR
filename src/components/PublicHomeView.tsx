@@ -16,10 +16,11 @@ import {
   Wifi,
   Zap,
 } from 'lucide-react';
-import { ContentType } from '../types/qr';
-import { PLAN_CATALOG, normalizeShortCodeInput } from '../utils/qrLogic';
+import { ContentType, PlanType, SubscriptionPlanConfig } from '../types/qr';
+import { formatPlanPrice, normalizeShortCodeInput } from '../utils/qrLogic';
 
 interface PublicHomeViewProps {
+  planCatalog: Record<PlanType, SubscriptionPlanConfig>;
   onGoogleLogin: () => Promise<void>;
   onOpenScanner: () => void;
   onResolveShortCode: (shortCode: string) => void;
@@ -91,6 +92,7 @@ const SHOWCASE_TYPES: {
 ];
 
 export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
+  planCatalog,
   onGoogleLogin,
   onOpenScanner,
   onResolveShortCode,
@@ -99,6 +101,11 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
   const [showSignInModal, setShowSignInModal] = useState(false);
   const [authError, setAuthError] = useState('');
   const [isSigningIn, setIsSigningIn] = useState(false);
+  const [billingCycle, setBillingCycle] = useState<'MONTHLY' | 'YEARLY'>('MONTHLY');
+
+  const visiblePlans = Object.values(planCatalog)
+    .filter((p) => p.isVisible)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
 
   const handleLookupSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -392,27 +399,57 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
         </div>
       </section>
 
-      {/* Section 3: Subscription Plans & Quotas */}
+      {/* Section 3: Subscription Plans & Quotas (Live from Super Admin catalog) */}
       <section id="pricing" className="max-w-7xl mx-auto px-6 py-14 border-t border-[#E6E0D6]">
-        <div className="text-center max-w-2xl mx-auto mb-10">
+        <div className="text-center max-w-2xl mx-auto mb-8">
           <p className="text-xs font-semibold text-[#D97745] mb-1">
             02. Transparent Quota Architecture
           </p>
           <h2 className="text-3xl font-bold text-[#292824]">
-            Subscription Plans & Limits
+            Subscription Plans & Pricing
           </h2>
           <p className="text-sm text-[#6E6A63] mt-2">
-            Manage thousands of dynamic QR codes with granular control over scan limits, direct routing, and white-label branding.
+            Manage thousands of dynamic QR codes with granular control over scan limits,
+            auto-routing timers, and white-label branding.
           </p>
+
+          <div className="inline-flex items-center p-1 bg-white border border-[#E6E0D6] rounded-xl mt-5">
+            <button
+              type="button"
+              onClick={() => setBillingCycle('MONTHLY')}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                billingCycle === 'MONTHLY'
+                  ? 'bg-[#233229] text-white'
+                  : 'text-[#6E6A63] hover:text-[#292824]'
+              }`}
+            >
+              Monthly
+            </button>
+            <button
+              type="button"
+              onClick={() => setBillingCycle('YEARLY')}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                billingCycle === 'YEARLY'
+                  ? 'bg-[#233229] text-white'
+                  : 'text-[#6E6A63] hover:text-[#292824]'
+              }`}
+            >
+              Yearly
+            </button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {(['FREE', 'PRO', 'ENTERPRISE', 'CUSTOM'] as const).map((tierKey) => {
-            const tier = PLAN_CATALOG[tierKey];
-            const highlighted = tierKey === 'PRO';
+        <div
+          className={`grid grid-cols-1 sm:grid-cols-2 ${
+            visiblePlans.length >= 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'
+          } gap-5`}
+        >
+          {visiblePlans.map((tier) => {
+            const highlighted = tier.isHighlighted;
+            const price = formatPlanPrice(tier, billingCycle);
             return (
               <div
-                key={tierKey}
+                key={tier.plan}
                 className={`rounded-3xl p-6 border flex flex-col justify-between ${
                   highlighted
                     ? 'bg-[#233229] text-white border-[#233229]'
@@ -436,25 +473,34 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
                     {tier.tagline}
                   </p>
 
-                  <div className="my-6 pt-5 border-t border-current/10 space-y-2.5 text-xs">
+                  <div className="mt-4 pt-4 border-t border-current/10 flex items-baseline gap-1.5">
+                    <span className="text-3xl font-bold font-mono tabular-nums">
+                      {price.amountText}
+                    </span>
+                    <span className="text-xs opacity-75">{price.suffix}</span>
+                  </div>
+
+                  <div className="my-5 pt-4 border-t border-current/10 space-y-2.5 text-xs">
                     <div className="flex justify-between">
                       <span className="opacity-75">Dynamic QR Codes</span>
                       <span className="font-mono font-bold tabular-nums">
-                        {tierKey === 'CUSTOM' ? 'Manual' : tier.maxBarcodes.toLocaleString()}
+                        {tier.maxBarcodes.toLocaleString()}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="opacity-75">Scans per Code</span>
                       <span className="font-mono font-bold tabular-nums">
-                        {tierKey === 'CUSTOM'
-                          ? 'Manual'
-                          : tier.maxScansPerBarcode.toLocaleString()}
+                        {tier.maxScansPerBarcode.toLocaleString()}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="opacity-75">Direct Redirect</span>
-                      <span className="font-bold">
-                        {tier.allowDirectRedirect ? 'Included' : 'Landing Only'}
+                      <span className="opacity-75">Auto-Redirect</span>
+                      <span className="font-mono font-bold tabular-nums">
+                        {tier.allowDirectRedirect
+                          ? tier.defaultRedirectDelaySeconds === 0
+                            ? 'Instant (0–30s)'
+                            : `Custom (${tier.defaultRedirectDelaySeconds}s)`
+                          : `Fixed ${tier.defaultRedirectDelaySeconds}s`}
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -475,7 +521,7 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
                       : 'bg-[#F8F5EF] hover:bg-[#EFECE6] text-[#292824] border border-[#E6E0D6]'
                   }`}
                 >
-                  Get Started with {tier.label}
+                  {tier.ctaLabel || `Get Started with ${tier.label}`}
                 </button>
               </div>
             );

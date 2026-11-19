@@ -270,6 +270,104 @@
         "invitedBy",
         "createdAt"
       ]
+    },
+    "SubscriptionPlan": {
+      "title": "SubscriptionPlan",
+      "description": "Dynamic subscription plan configuration managed by Super Admins and displayed live to all Admins.",
+      "type": "object",
+      "properties": {
+        "plan": {
+          "type": "string",
+          "enum": ["FREE", "PRO", "ENTERPRISE", "CUSTOM"],
+          "maxLength": 20
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "tagline": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "priceMonthly": {
+          "type": "number"
+        },
+        "priceYearly": {
+          "type": "number"
+        },
+        "currency": {
+          "type": "string",
+          "maxLength": 10
+        },
+        "billingNote": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "maxBarcodes": {
+          "type": "number"
+        },
+        "maxScansPerBarcode": {
+          "type": "number"
+        },
+        "allowDirectRedirect": {
+          "type": "boolean"
+        },
+        "allowWhiteLabel": {
+          "type": "boolean"
+        },
+        "defaultRedirectDelaySeconds": {
+          "type": "number"
+        },
+        "features": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 120
+          }
+        },
+        "isHighlighted": {
+          "type": "boolean"
+        },
+        "isVisible": {
+          "type": "boolean"
+        },
+        "ctaLabel": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "contactNote": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "sortOrder": {
+          "type": "number"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "plan",
+        "label",
+        "tagline",
+        "priceMonthly",
+        "priceYearly",
+        "currency",
+        "billingNote",
+        "maxBarcodes",
+        "maxScansPerBarcode",
+        "allowDirectRedirect",
+        "allowWhiteLabel",
+        "defaultRedirectDelaySeconds",
+        "features",
+        "isHighlighted",
+        "isVisible",
+        "ctaLabel",
+        "contactNote",
+        "sortOrder",
+        "updatedAt"
+      ]
     }
   },
   "firestore": {
@@ -292,6 +390,10 @@
     "/superAdminInvites/{inviteId}": {
       "schema": { "$ref": "#/entities/SuperAdminInvite" },
       "description": "Email invitations and role grants managed exclusively by Super Admins."
+    },
+    "/subscriptionPlans/{planId}": {
+      "schema": { "$ref": "#/entities/SubscriptionPlan" },
+      "description": "Live subscription plan pricing, quotas, and features controlled by Super Admins."
     }
   }
 }

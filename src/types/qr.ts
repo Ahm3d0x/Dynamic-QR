@@ -88,6 +88,28 @@ export interface SuperAdminInviteRecord {
   createdAt?: any;
 }
 
+export interface SubscriptionPlanConfig {
+  plan: PlanType;
+  label: string;
+  tagline: string;
+  priceMonthly: number;
+  priceYearly: number;
+  currency: string;
+  billingNote: string;
+  maxBarcodes: number;
+  maxScansPerBarcode: number;
+  allowDirectRedirect: boolean;
+  allowWhiteLabel: boolean;
+  defaultRedirectDelaySeconds: number;
+  features: string[];
+  isHighlighted: boolean;
+  isVisible: boolean;
+  ctaLabel: string;
+  contactNote: string;
+  sortOrder: number;
+  updatedAt?: any;
+}
+
 export type RedirectValidationState =
   | { status: 'OK'; mode: RedirectMode; barcode: BarcodeRecord }
   | { status: 'CODE_NOT_FOUND'; message: string }

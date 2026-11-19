@@ -7,11 +7,14 @@ import {
   clampRedirectDelay,
   enforcePlanFeatureConstraints,
   evaluateSmartRedirect,
+  formatPlanPrice,
   formatVCardDownloadString,
   generateShortCode,
   getPlanDefaults,
   normalizeShortCodeInput,
+  PLAN_CATALOG,
   resolveAutoRedirectDelay,
+  sanitizeSubscriptionPlan,
   validateDestinationPayload,
 } from './qrLogic';
 import { BarcodeRecord } from '../types/qr';
@@ -219,4 +222,27 @@ test('validateDestinationPayload and helper formatters work accurately', () => {
     address: 'Zamalek, Cairo',
   });
   assert.ok(mapsUrl.includes('30.0459%2C31.2243'));
+});
+
+test('formatPlanPrice and sanitizeSubscriptionPlan handle live currency and boundary clamping', () => {
+  const usdMonthly = formatPlanPrice(PLAN_CATALOG.PRO, 'MONTHLY');
+  assert.equal(usdMonthly.amountText, '$19');
+  assert.equal(usdMonthly.suffix, '/ month');
+
+  const egpYearly = formatPlanPrice(
+    { ...PLAN_CATALOG.PRO, currency: 'EGP', priceYearly: 4500, billingNote: '/ month' },
+    'YEARLY'
+  );
+  assert.equal(egpYearly.amountText, '4,500 EGP');
+  assert.equal(egpYearly.suffix, '/ year');
+
+  const sanitized = sanitizeSubscriptionPlan({
+    ...PLAN_CATALOG.PRO,
+    priceMonthly: -10,
+    defaultRedirectDelaySeconds: 99,
+    features: Array.from({ length: 15 }, (_, i) => `Feature ${i + 1}`),
+  });
+  assert.equal(sanitized.priceMonthly, 0);
+  assert.equal(sanitized.defaultRedirectDelaySeconds, 30);
+  assert.equal(sanitized.features.length, 12);
 });

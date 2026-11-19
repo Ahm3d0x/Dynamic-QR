@@ -5,68 +5,192 @@ import {
   PlanType,
   RedirectMode,
   RedirectValidationState,
+  SubscriptionPlanConfig,
   TextPromoData,
   UserProfile,
   VCardData,
   WifiData,
 } from '../types/qr';
 
-export interface PlanDefaults {
-  plan: PlanType;
-  label: string;
-  tagline: string;
-  maxBarcodes: number;
-  maxScansPerBarcode: number;
-  allowDirectRedirect: boolean;
-  allowWhiteLabel: boolean;
-  defaultRedirectDelaySeconds: number;
-}
+export type PlanDefaults = SubscriptionPlanConfig;
 
-export const PLAN_CATALOG: Record<PlanType, PlanDefaults> = {
+export const PLAN_CATALOG: Record<PlanType, SubscriptionPlanConfig> = {
   FREE: {
     plan: 'FREE',
     label: 'Free Tier',
     tagline: 'For individuals & quick tests',
+    priceMonthly: 0,
+    priceYearly: 0,
+    currency: 'USD',
+    billingNote: 'Forever Free',
     maxBarcodes: 5,
     maxScansPerBarcode: 500,
     allowDirectRedirect: false,
     allowWhiteLabel: false,
     defaultRedirectDelaySeconds: 5,
+    features: [
+      'Up to 5 Dynamic QR Codes',
+      '500 Scans per QR Code',
+      'Fixed 5s Auto-Redirect timer',
+      'All 6 content engines (URL, Menu, vCard, WiFi, Text, Geo)',
+      'Print-ready SVG & PNG export',
+    ],
+    isHighlighted: false,
+    isVisible: true,
+    ctaLabel: 'Start Free',
+    contactNote: 'Included automatically for all new accounts.',
+    sortOrder: 1,
   },
   PRO: {
     plan: 'PRO',
     label: 'Professional',
     tagline: 'For restaurants, retail & creators',
+    priceMonthly: 19,
+    priceYearly: 190,
+    currency: 'USD',
+    billingNote: '/ month',
     maxBarcodes: 50,
     maxScansPerBarcode: 10000,
     allowDirectRedirect: true,
     allowWhiteLabel: true,
     defaultRedirectDelaySeconds: 2,
+    features: [
+      'Up to 50 Dynamic QR Codes',
+      '10,000 Scans per QR Code',
+      'Custom Auto-Redirect timer (0s instant – 30s)',
+      'Direct Redirect & White-Label branding',
+      'Atomic real-time scan activity logs',
+    ],
+    isHighlighted: true,
+    isVisible: true,
+    ctaLabel: 'Upgrade to Pro',
+    contactNote: 'Contact your platform administrator to activate the Professional plan on your account.',
+    sortOrder: 2,
   },
   ENTERPRISE: {
     plan: 'ENTERPRISE',
     label: 'Enterprise',
     tagline: 'For multi-branch brands & agencies',
+    priceMonthly: 79,
+    priceYearly: 790,
+    currency: 'USD',
+    billingNote: '/ month',
     maxBarcodes: 10000,
     maxScansPerBarcode: 1000000,
     allowDirectRedirect: true,
     allowWhiteLabel: true,
     defaultRedirectDelaySeconds: 0,
+    features: [
+      'Up to 10,000 Dynamic QR Codes',
+      '1,000,000 Scans per QR Code',
+      'Instant 0s Auto-Routing by default',
+      'Full White-Label Smart Landing pages',
+      'Priority onboarding & dedicated support',
+    ],
+    isHighlighted: false,
+    isVisible: true,
+    ctaLabel: 'Upgrade to Enterprise',
+    contactNote: 'Contact your platform administrator for Enterprise activation and multi-branch billing.',
+    sortOrder: 3,
   },
   CUSTOM: {
     plan: 'CUSTOM',
     label: 'Custom Plan',
     tagline: 'Tailored limits and feature controls',
+    priceMonthly: 0,
+    priceYearly: 0,
+    currency: 'USD',
+    billingNote: 'Custom Quote',
     maxBarcodes: 250,
     maxScansPerBarcode: 50000,
     allowDirectRedirect: true,
     allowWhiteLabel: true,
     defaultRedirectDelaySeconds: 3,
+    features: [
+      'Custom QR code & scan quotas',
+      'Tailored Auto-Redirect timer policy',
+      'White-Label & Direct Redirect included',
+      'Flexible billing & dedicated account manager',
+    ],
+    isHighlighted: false,
+    isVisible: true,
+    ctaLabel: 'Request Custom Plan',
+    contactNote: 'Reach out to the platform owner to configure tailored limits and pricing for your team.',
+    sortOrder: 4,
   },
 };
 
-export function getPlanDefaults(plan: PlanType): PlanDefaults {
-  return PLAN_CATALOG[plan] || PLAN_CATALOG.FREE;
+export function getPlanDefaults(
+  plan: PlanType,
+  catalog: Record<PlanType, SubscriptionPlanConfig> = PLAN_CATALOG
+): SubscriptionPlanConfig {
+  return catalog[plan] || PLAN_CATALOG[plan] || PLAN_CATALOG.FREE;
+}
+
+export function formatPlanPrice(
+  plan: Pick<SubscriptionPlanConfig, 'plan' | 'priceMonthly' | 'priceYearly' | 'currency' | 'billingNote'>,
+  cycle: 'MONTHLY' | 'YEARLY'
+): { amountText: string; suffix: string } {
+  const amount = cycle === 'YEARLY' ? plan.priceYearly : plan.priceMonthly;
+  if (amount <= 0) {
+    if (plan.plan === 'CUSTOM' || plan.billingNote.toLowerCase().includes('custom') || plan.billingNote.toLowerCase().includes('quote')) {
+      return { amountText: 'Custom', suffix: plan.billingNote || 'Tailored pricing' };
+    }
+    return { amountText: 'Free', suffix: plan.billingNote || 'Forever Free' };
+  }
+
+  const symbolMap: Record<string, string> = {
+    USD: '$',
+    EUR: '€',
+    GBP: '£',
+  };
+  const upperCurrency = plan.currency.trim().toUpperCase();
+  const formattedNum = amount.toLocaleString();
+  const amountText = symbolMap[upperCurrency]
+    ? `${symbolMap[upperCurrency]}${formattedNum}`
+    : `${formattedNum} ${plan.currency.trim()}`;
+
+  const suffix =
+    cycle === 'YEARLY'
+      ? plan.billingNote.toLowerCase().includes('month')
+        ? '/ year'
+        : plan.billingNote || '/ year'
+      : plan.billingNote || '/ month';
+
+  return { amountText, suffix };
+}
+
+export function sanitizeSubscriptionPlan(
+  input: SubscriptionPlanConfig
+): Omit<SubscriptionPlanConfig, 'updatedAt'> {
+  const cleanFeatures = (Array.isArray(input.features) ? input.features : [])
+    .map((f) => String(f || '').trim().slice(0, 120))
+    .filter((f) => f.length > 0)
+    .slice(0, 12);
+
+  return {
+    plan: input.plan,
+    label: (input.label || input.plan).trim().slice(0, 60) || input.plan,
+    tagline: (input.tagline || 'Dynamic QR subscription plan').trim().slice(0, 160),
+    priceMonthly: Math.min(100000, Math.max(0, Number(input.priceMonthly) || 0)),
+    priceYearly: Math.min(1000000, Math.max(0, Number(input.priceYearly) || 0)),
+    currency: (input.currency || 'USD').trim().slice(0, 10) || 'USD',
+    billingNote: (input.billingNote || '').trim().slice(0, 80),
+    maxBarcodes: Math.min(1000000, Math.max(0, Math.round(Number(input.maxBarcodes) || 0))),
+    maxScansPerBarcode: Math.min(
+      100000000,
+      Math.max(1, Math.round(Number(input.maxScansPerBarcode) || 1))
+    ),
+    allowDirectRedirect: Boolean(input.allowDirectRedirect),
+    allowWhiteLabel: Boolean(input.allowWhiteLabel),
+    defaultRedirectDelaySeconds: clampRedirectDelay(Number(input.defaultRedirectDelaySeconds)),
+    features: cleanFeatures,
+    isHighlighted: Boolean(input.isHighlighted),
+    isVisible: Boolean(input.isVisible),
+    ctaLabel: (input.ctaLabel || `Choose ${input.plan}`).trim().slice(0, 60),
+    contactNote: (input.contactNote || '').trim().slice(0, 200),
+    sortOrder: Math.min(20, Math.max(0, Math.round(Number(input.sortOrder) || 0))),
+  };
 }
 
 export function generateShortCode(seed?: string): string {

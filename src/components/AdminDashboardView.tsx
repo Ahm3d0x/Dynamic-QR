@@ -21,7 +21,11 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { BarcodeRecord, ContentType, ScanLogRecord, UserProfile } from '../types/qr';
-import { buildShortLinkUrl, canUserCreateBarcode } from '../utils/qrLogic';
+import {
+  buildShortLinkUrl,
+  canUserCreateBarcode,
+  resolveAutoRedirectDelay,
+} from '../utils/qrLogic';
 
 interface AdminDashboardViewProps {
   user: UserProfile;
@@ -135,13 +139,13 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               </span>
             </div>
 
-            {onSwitchToSuperAdmin && (
+            {user.role === 'SUPER_ADMIN' && onSwitchToSuperAdmin && (
               <button
                 type="button"
                 onClick={onSwitchToSuperAdmin}
                 className="lg:hidden px-2.5 py-1 bg-[#D97745] text-white text-xs font-bold rounded-lg cursor-pointer"
               >
-                Super Admin
+                Platform Console
               </button>
             )}
           </div>
@@ -221,14 +225,14 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
             </span>
           </div>
 
-          {onSwitchToSuperAdmin && (
+          {user.role === 'SUPER_ADMIN' && onSwitchToSuperAdmin && (
             <button
               type="button"
               onClick={onSwitchToSuperAdmin}
               className="w-full flex items-center justify-center gap-2 py-2.5 px-3 bg-[#D97745]/20 hover:bg-[#D97745] text-[#D97745] hover:text-white border border-[#D97745]/40 rounded-xl text-xs font-bold transition-colors cursor-pointer"
             >
               <Shield className="w-3.5 h-3.5" />
-              <span>Super Admin Panel</span>
+              <span>Platform Console</span>
             </button>
           )}
         </div>
@@ -283,15 +287,6 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
         {!quotaCheck.allowed && (
           <div className="mx-6 mt-4 p-3.5 bg-[#FDF2EC] border border-[#D97745] rounded-2xl text-xs font-semibold text-[#292824] flex items-center justify-between">
             <span>{quotaCheck.reason}</span>
-            {onSwitchToSuperAdmin && (
-              <button
-                type="button"
-                onClick={onSwitchToSuperAdmin}
-                className="text-[#D97745] font-bold underline cursor-pointer"
-              >
-                Adjust Quota in Super Admin
-              </button>
-            )}
           </div>
         )}
 
@@ -579,14 +574,21 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                               </span>
                             </div>
 
-                            <div className="text-xs text-[#6E6A63] mt-1 flex items-center gap-1.5">
+                            <div className="text-xs text-[#6E6A63] mt-1 flex items-center gap-1.5 flex-wrap">
                               <span className="font-mono font-semibold text-[#292824]">
                                 {bc.shortCode}
                               </span>
                               <span>·</span>
                               <span>{bc.type}</span>
                               <span>·</span>
-                              <span>{bc.redirectMode}</span>
+                              <span>
+                                {bc.type === 'URL'
+                                  ? (() => {
+                                      const d = resolveAutoRedirectDelay(bc);
+                                      return d === 0 ? 'Instant' : `Auto ${d}s`;
+                                    })()
+                                  : bc.redirectMode}
+                              </span>
                             </div>
 
                             <div className="mt-2 text-xs font-mono text-[#6E6A63] tabular-nums">

@@ -4,9 +4,11 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
+  Clock,
   FileText,
   Globe,
   Image as ImageIcon,
+  Lock,
   MapPin,
   UserSquare2,
   Wifi,
@@ -24,6 +26,7 @@ import {
 } from '../types/qr';
 import {
   buildShortLinkUrl,
+  clampRedirectDelay,
   enforcePlanFeatureConstraints,
   generateShortCode,
   parseGeoEvent,
@@ -101,12 +104,20 @@ export const CreateEditQRModal: React.FC<CreateEditQRModalProps> = ({
   });
 
   const [redirectMode, setRedirectMode] = useState<RedirectMode>('LANDING');
+  const [redirectDelaySeconds, setRedirectDelaySeconds] = useState<number>(5);
   const [welcomeMessage, setWelcomeMessage] = useState('Welcome! Tap below to open your destination.');
   const [ctaText, setCtaText] = useState('Open Destination');
   const [qrColor, setQrColor] = useState('#292824');
   const [hideBranding, setHideBranding] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [saving, setSaving] = useState(false);
+
+  const userDefaultDelay =
+    typeof user.defaultRedirectDelaySeconds === 'number'
+      ? clampRedirectDelay(user.defaultRedirectDelaySeconds)
+      : user.allowDirectRedirect
+      ? 2
+      : 5;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -117,6 +128,13 @@ export const CreateEditQRModal: React.FC<CreateEditQRModalProps> = ({
       setTitle(existingBarcode.title);
       setType(existingBarcode.type);
       setRedirectMode(existingBarcode.redirectMode);
+      setRedirectDelaySeconds(
+        typeof existingBarcode.redirectDelaySeconds === 'number'
+          ? clampRedirectDelay(existingBarcode.redirectDelaySeconds)
+          : existingBarcode.redirectMode === 'DIRECT'
+          ? 0
+          : userDefaultDelay
+      );
       setWelcomeMessage(existingBarcode.welcomeMessage);
       setCtaText(existingBarcode.ctaText);
       setQrColor(existingBarcode.qrColor);
@@ -139,12 +157,13 @@ export const CreateEditQRModal: React.FC<CreateEditQRModalProps> = ({
       setType('URL');
       setUrlInput('https://example.com');
       setRedirectMode(user.allowDirectRedirect ? 'DIRECT' : 'LANDING');
+      setRedirectDelaySeconds(user.allowDirectRedirect ? userDefaultDelay : userDefaultDelay);
       setWelcomeMessage('Welcome! Discover our curated digital experience.');
       setCtaText('Open Website');
       setQrColor('#292824');
       setHideBranding(false);
     }
-  }, [isOpen, existingBarcode, user]);
+  }, [isOpen, existingBarcode, user, userDefaultDelay]);
 
   if (!isOpen) return null;
 
@@ -199,7 +218,12 @@ export const CreateEditQRModal: React.FC<CreateEditQRModalProps> = ({
       return;
     }
 
-    const enforced = enforcePlanFeatureConstraints(user, redirectMode, hideBranding);
+    const enforced = enforcePlanFeatureConstraints(
+      user,
+      redirectMode,
+      hideBranding,
+      redirectDelaySeconds
+    );
     setSaving(true);
     try {
       await onSave({
@@ -211,6 +235,7 @@ export const CreateEditQRModal: React.FC<CreateEditQRModalProps> = ({
         type,
         destination: destination.slice(0, 2000),
         redirectMode: enforced.redirectMode,
+        redirectDelaySeconds: enforced.redirectDelaySeconds,
         welcomeMessage: (welcomeMessage.trim() || 'Welcome!').slice(0, 300),
         ctaText: (ctaText.trim() || 'Continue').slice(0, 80),
         qrColor,
@@ -618,13 +643,16 @@ export const CreateEditQRModal: React.FC<CreateEditQRModalProps> = ({
                 {/* Redirect Mode Selection */}
                 <div>
                   <span className="block text-xs font-semibold text-[#292824] mb-2">
-                    4. Redirect Mode
+                    4. Redirect Mode & Auto-Routing
                   </span>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <button
                       type="button"
                       disabled={!user.allowDirectRedirect || type !== 'URL'}
-                      onClick={() => setRedirectMode('DIRECT')}
+                      onClick={() => {
+                        setRedirectMode('DIRECT');
+                        setRedirectDelaySeconds(0);
+                      }}
                       className={`p-3.5 rounded-xl border text-left transition-colors ${
                         redirectMode === 'DIRECT' && user.allowDirectRedirect && type === 'URL'
                           ? 'bg-[#FDF2EC] border-[#D97745]'
@@ -636,19 +664,24 @@ export const CreateEditQRModal: React.FC<CreateEditQRModalProps> = ({
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-[#292824]">Direct Redirect</span>
+                        <span className="text-xs font-bold text-[#292824]">Direct Auto-Redirect</span>
                         {!user.allowDirectRedirect && (
                           <span className="text-[11px] font-semibold text-[#D97745]">Pro Plan</span>
                         )}
                       </div>
                       <span className="text-[11px] text-[#6E6A63] block mt-0.5">
-                        Go straight to external URL immediately after scan count
+                        Route straight to the URL automatically (0s instant or custom timer)
                       </span>
                     </button>
 
                     <button
                       type="button"
-                      onClick={() => setRedirectMode('LANDING')}
+                      onClick={() => {
+                        setRedirectMode('LANDING');
+                        if (user.allowDirectRedirect && redirectDelaySeconds === 0) {
+                          setRedirectDelaySeconds(userDefaultDelay > 0 ? userDefaultDelay : 3);
+                        }
+                      }}
                       className={`p-3.5 rounded-xl border text-left transition-colors cursor-pointer ${
                         redirectMode === 'LANDING' || !user.allowDirectRedirect || type !== 'URL'
                           ? 'bg-[#FDF2EC] border-[#D97745]'
@@ -659,10 +692,83 @@ export const CreateEditQRModal: React.FC<CreateEditQRModalProps> = ({
                         Smart Landing Page
                       </span>
                       <span className="text-[11px] text-[#6E6A63] block mt-0.5">
-                        Render branded mobile card with welcome message & CTA button
+                        Show branded card then auto-route to URL after countdown
                       </span>
                     </button>
                   </div>
+
+                  {/* Auto-Redirect Timer Config (URL codes only) */}
+                  {type === 'URL' && (
+                    <div className="mt-3 p-3.5 bg-[#F8F5EF] border border-[#E6E0D6] rounded-xl space-y-2.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#292824]">
+                          <Clock className="w-3.5 h-3.5 text-[#D97745]" />
+                          <span>Auto-Redirect Timer</span>
+                        </span>
+                        <span className="text-[11px] font-mono font-semibold text-[#D97745] tabular-nums">
+                          {(!user.allowDirectRedirect ? userDefaultDelay : redirectDelaySeconds) === 0
+                            ? 'Instant (0s)'
+                            : `${!user.allowDirectRedirect ? userDefaultDelay : redirectDelaySeconds}s delay`}
+                        </span>
+                      </div>
+
+                      {!user.allowDirectRedirect ? (
+                        <div className="flex items-start gap-2 text-[11px] text-[#6E6A63]">
+                          <Lock className="w-3.5 h-3.5 text-[#D97745] shrink-0 mt-0.5" />
+                          <span>
+                            Fixed at <strong className="text-[#292824]">{userDefaultDelay} seconds</strong> on
+                            the {user.plan} plan. Visitors are automatically redirected without needing to
+                            tap the button. Upgrade to customize delay or enable 0s instant routing.
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {[0, 2, 3, 5, 10].map((preset) => (
+                              <button
+                                key={preset}
+                                type="button"
+                                onClick={() => setRedirectDelaySeconds(preset)}
+                                className={`px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-colors cursor-pointer tabular-nums ${
+                                  redirectDelaySeconds === preset
+                                    ? 'bg-[#D97745] text-white border-[#D97745]'
+                                    : 'bg-white text-[#292824] border-[#E6E0D6] hover:border-[#D97745]'
+                                }`}
+                              >
+                                {preset === 0 ? '0s Instant' : `${preset}s`}
+                              </button>
+                            ))}
+
+                            <div className="flex items-center gap-1.5 ml-auto">
+                              <label
+                                htmlFor="qr-redirect-delay"
+                                className="text-[11px] font-semibold text-[#6E6A63]"
+                              >
+                                Custom:
+                              </label>
+                              <input
+                                id="qr-redirect-delay"
+                                type="number"
+                                min={0}
+                                max={30}
+                                value={redirectDelaySeconds}
+                                onChange={(e) =>
+                                  setRedirectDelaySeconds(clampRedirectDelay(Number(e.target.value)))
+                                }
+                                className="w-16 px-2 py-1 bg-white border border-[#E6E0D6] rounded-lg text-xs font-mono text-center text-[#292824] tabular-nums focus:outline-none focus:border-[#D97745]"
+                              />
+                              <span className="text-[11px] text-[#6E6A63]">sec</span>
+                            </div>
+                          </div>
+                          <p className="text-[11px] text-[#6E6A63]">
+                            {redirectDelaySeconds === 0
+                              ? 'Visitors are routed automatically the moment scan verification completes.'
+                              : `Visitors see your branded card and automatically redirect after ${redirectDelaySeconds} seconds.`}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </>
             )}
@@ -771,6 +877,15 @@ export const CreateEditQRModal: React.FC<CreateEditQRModalProps> = ({
                     <span className="text-[#6E6A63] block">Content Type & Mode</span>
                     <span className="font-bold text-[#292824]">
                       {type} · {redirectMode}
+                      {type === 'URL'
+                        ? ` · ${
+                            (!user.allowDirectRedirect ? userDefaultDelay : redirectDelaySeconds) === 0
+                              ? 'Instant'
+                              : `Auto ${
+                                  !user.allowDirectRedirect ? userDefaultDelay : redirectDelaySeconds
+                                }s`
+                          }`
+                        : ''}
                     </span>
                   </div>
                   <div className="bg-white p-3 rounded-xl border border-[#E6E0D6]">
@@ -815,6 +930,16 @@ export const CreateEditQRModal: React.FC<CreateEditQRModalProps> = ({
                 <span>Routing:</span>
                 <span className="font-semibold text-[#292824]">{redirectMode}</span>
               </div>
+              {type === 'URL' && (
+                <div className="flex justify-between">
+                  <span>Auto-Route:</span>
+                  <span className="font-mono font-semibold text-[#2E6B3E] tabular-nums">
+                    {(!user.allowDirectRedirect ? userDefaultDelay : redirectDelaySeconds) === 0
+                      ? 'Instant (0s)'
+                      : `${!user.allowDirectRedirect ? userDefaultDelay : redirectDelaySeconds}s`}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span>CTA Button:</span>
                 <span className="font-semibold text-[#D97745] truncate max-w-[130px]">

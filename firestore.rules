@@ -52,7 +52,7 @@ service cloud.firestore {
       data.keys().hasOnly([
         'uid', 'name', 'email', 'role', 'status', 'plan',
         'maxBarcodes', 'maxScansPerBarcode', 'allowDirectRedirect',
-        'allowWhiteLabel', 'createdAt', 'updatedAt'
+        'allowWhiteLabel', 'defaultRedirectDelaySeconds', 'createdAt', 'updatedAt'
       ]) &&
       data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 && data.uid.matches('^[a-zA-Z0-9_\\-]+$') &&
       data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
@@ -64,6 +64,7 @@ service cloud.firestore {
       data.maxScansPerBarcode is number && data.maxScansPerBarcode >= 0 && data.maxScansPerBarcode <= 100000000 &&
       data.allowDirectRedirect is bool &&
       data.allowWhiteLabel is bool &&
+      (!('defaultRedirectDelaySeconds' in data) || (data.defaultRedirectDelaySeconds is number && data.defaultRedirectDelaySeconds >= 0 && data.defaultRedirectDelaySeconds <= 30)) &&
       data.createdAt is timestamp &&
       data.updatedAt is timestamp;
     }
@@ -78,9 +79,10 @@ service cloud.firestore {
       ]) &&
       data.keys().hasOnly([
         'shortCode', 'ownerId', 'ownerEmail', 'ownerStatus', 'title',
-        'type', 'destination', 'redirectMode', 'welcomeMessage', 'ctaText',
-        'qrColor', 'hideBranding', 'codeActive', 'isDeleted',
-        'scanCount', 'maxScansLimit', 'createdAt', 'updatedAt'
+        'type', 'destination', 'redirectMode', 'redirectDelaySeconds',
+        'welcomeMessage', 'ctaText', 'qrColor', 'hideBranding',
+        'codeActive', 'isDeleted', 'scanCount', 'maxScansLimit',
+        'createdAt', 'updatedAt'
       ]) &&
       data.shortCode is string && data.shortCode.size() >= 4 && data.shortCode.size() <= 32 && data.shortCode.matches('^[a-zA-Z0-9_\\-]+$') &&
       data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 && data.ownerId.matches('^[a-zA-Z0-9_\\-]+$') &&
@@ -93,6 +95,7 @@ service cloud.firestore {
       ) &&
       data.destination is string && data.destination.size() >= 1 && data.destination.size() <= 2000 &&
       data.redirectMode is string && data.redirectMode.size() <= 20 && (data.redirectMode == 'DIRECT' || data.redirectMode == 'LANDING') &&
+      (!('redirectDelaySeconds' in data) || (data.redirectDelaySeconds is number && data.redirectDelaySeconds >= 0 && data.redirectDelaySeconds <= 30)) &&
       data.welcomeMessage is string && data.welcomeMessage.size() <= 300 &&
       data.ctaText is string && data.ctaText.size() <= 80 &&
       data.qrColor is string && data.qrColor.size() >= 4 && data.qrColor.size() <= 20 &&
@@ -129,6 +132,19 @@ service cloud.firestore {
       data.updatedAt is timestamp;
     }
 
+    // Validation Blueprint: SuperAdminInvite
+    function isValidSuperAdminInvite(data) {
+      return data.keys().hasAll(['email', 'role', 'plan', 'invitedBy', 'createdAt']) &&
+      data.keys().hasOnly(['email', 'role', 'plan', 'invitedBy', 'createdAt']) &&
+      data.email is string && data.email.size() >= 3 && data.email.size() <= 200 &&
+      data.role is string && data.role.size() <= 20 && (data.role == 'ADMIN' || data.role == 'SUPER_ADMIN') &&
+      data.plan is string && data.plan.size() <= 20 && (
+        data.plan == 'FREE' || data.plan == 'PRO' || data.plan == 'ENTERPRISE' || data.plan == 'CUSTOM'
+      ) &&
+      data.invitedBy is string && data.invitedBy.size() >= 3 && data.invitedBy.size() <= 200 &&
+      data.createdAt is timestamp;
+    }
+
     // Collection: users
     match /users/{userId} {
       allow get: if isValidId(userId) && (isOwner(userId) || isSuperAdmin());
@@ -141,6 +157,7 @@ service cloud.firestore {
         incoming().createdAt == request.time &&
         incoming().updatedAt == request.time &&
         incoming().status == 'ACTIVE' && (
+          // Standard user self-registration defaults to ADMIN + FREE
           (
             !isBootstrappedSuperAdmin() &&
             incoming().role == 'ADMIN' &&
@@ -148,8 +165,10 @@ service cloud.firestore {
             incoming().maxBarcodes == 5 &&
             incoming().maxScansPerBarcode == 500 &&
             incoming().allowDirectRedirect == false &&
-            incoming().allowWhiteLabel == false
+            incoming().allowWhiteLabel == false &&
+            (!('defaultRedirectDelaySeconds' in incoming()) || incoming().defaultRedirectDelaySeconds == 5)
           ) ||
+          // Primary database owner (ah2005211@gmail.com) gets SUPER_ADMIN
           (
             isBootstrappedSuperAdmin() &&
             incoming().role == 'SUPER_ADMIN'
@@ -173,7 +192,8 @@ service cloud.firestore {
             isSuperAdmin() &&
             incoming().diff(existing()).affectedKeys().hasOnly([
               'name', 'role', 'status', 'plan', 'maxBarcodes',
-              'maxScansPerBarcode', 'allowDirectRedirect', 'allowWhiteLabel', 'updatedAt'
+              'maxScansPerBarcode', 'allowDirectRedirect', 'allowWhiteLabel',
+              'defaultRedirectDelaySeconds', 'updatedAt'
             ])
           )
         );
@@ -214,7 +234,7 @@ service cloud.firestore {
             incoming().maxScansLimit == existing().maxScansLimit &&
             incoming().ownerStatus == existing().ownerStatus &&
             incoming().diff(existing()).affectedKeys().hasOnly([
-              'title', 'type', 'destination', 'redirectMode',
+              'title', 'type', 'destination', 'redirectMode', 'redirectDelaySeconds',
               'welcomeMessage', 'ctaText', 'qrColor', 'hideBranding',
               'codeActive', 'isDeleted', 'updatedAt'
             ])
@@ -232,7 +252,7 @@ service cloud.firestore {
           (
             isSuperAdmin() &&
             incoming().diff(existing()).affectedKeys().hasOnly([
-              'title', 'type', 'destination', 'redirectMode',
+              'title', 'type', 'destination', 'redirectMode', 'redirectDelaySeconds',
               'welcomeMessage', 'ctaText', 'qrColor', 'hideBranding',
               'codeActive', 'isDeleted', 'ownerStatus', 'maxScansLimit', 'updatedAt'
             ])
@@ -265,6 +285,24 @@ service cloud.firestore {
         incoming().updatedAt == request.time &&
         isSuperAdmin();
       allow delete: if false;
+    }
+
+    // Collection: superAdminInvites
+    match /superAdminInvites/{inviteId} {
+      allow get: if isValidId(inviteId) && (
+        isSuperAdmin() ||
+        (isSignedIn() && resource.data.email == request.auth.token.email)
+      );
+      allow list: if isSuperAdmin() || (isSignedIn() && resource.data.email == request.auth.token.email);
+      allow create: if isValidId(inviteId) &&
+        isValidSuperAdminInvite(incoming()) &&
+        incoming().createdAt == request.time &&
+        isSuperAdmin();
+      allow update: if false;
+      allow delete: if isValidId(inviteId) && (
+        isSuperAdmin() ||
+        (isSignedIn() && resource.data.email == request.auth.token.email)
+      );
     }
   }
 }

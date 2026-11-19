@@ -4,12 +4,14 @@ import {
   buildGoogleMapsUrl,
   buildShortLinkUrl,
   canUserCreateBarcode,
+  clampRedirectDelay,
   enforcePlanFeatureConstraints,
   evaluateSmartRedirect,
   formatVCardDownloadString,
   generateShortCode,
   getPlanDefaults,
   normalizeShortCodeInput,
+  resolveAutoRedirectDelay,
   validateDestinationPayload,
 } from './qrLogic';
 import { BarcodeRecord } from '../types/qr';
@@ -79,14 +81,62 @@ test('canUserCreateBarcode blocks suspended users and quota overflow', () => {
   );
 });
 
-test('enforcePlanFeatureConstraints restricts DIRECT and White-Label on FREE plan', () => {
+test('enforcePlanFeatureConstraints restricts DIRECT, White-Label, and locks delay on FREE plan', () => {
   const constrained = enforcePlanFeatureConstraints(
-    { allowDirectRedirect: false, allowWhiteLabel: false },
+    { allowDirectRedirect: false, allowWhiteLabel: false, defaultRedirectDelaySeconds: 5 },
     'DIRECT',
-    true
+    true,
+    0
   );
   assert.equal(constrained.redirectMode, 'LANDING');
   assert.equal(constrained.hideBranding, false);
+  assert.equal(constrained.redirectDelaySeconds, 5);
+
+  const proCustom = enforcePlanFeatureConstraints(
+    { allowDirectRedirect: true, allowWhiteLabel: true, defaultRedirectDelaySeconds: 2 },
+    'LANDING',
+    true,
+    4
+  );
+  assert.equal(proCustom.redirectMode, 'LANDING');
+  assert.equal(proCustom.hideBranding, true);
+  assert.equal(proCustom.redirectDelaySeconds, 4);
+
+  const proInstant = enforcePlanFeatureConstraints(
+    { allowDirectRedirect: true, allowWhiteLabel: true, defaultRedirectDelaySeconds: 2 },
+    'DIRECT',
+    false,
+    0
+  );
+  assert.equal(proInstant.redirectDelaySeconds, 0);
+});
+
+test('resolveAutoRedirectDelay resolves fixed/custom delays for URLs and null for non-URLs', () => {
+  assert.equal(
+    resolveAutoRedirectDelay({ type: 'URL', redirectMode: 'LANDING', redirectDelaySeconds: undefined }),
+    5
+  );
+  assert.equal(
+    resolveAutoRedirectDelay({ type: 'URL', redirectMode: 'DIRECT', redirectDelaySeconds: undefined }),
+    0
+  );
+  assert.equal(
+    resolveAutoRedirectDelay({ type: 'URL', redirectMode: 'LANDING', redirectDelaySeconds: 3 }),
+    3
+  );
+  assert.equal(
+    resolveAutoRedirectDelay({ type: 'URL', redirectMode: 'LANDING', redirectDelaySeconds: 99 }),
+    30
+  );
+  assert.equal(clampRedirectDelay(-5), 0);
+  assert.equal(
+    resolveAutoRedirectDelay({ type: 'WIFI', redirectMode: 'LANDING', redirectDelaySeconds: 3 }),
+    null
+  );
+  assert.equal(
+    resolveAutoRedirectDelay({ type: 'IMAGE', redirectMode: 'LANDING', redirectDelaySeconds: 0 }),
+    null
+  );
 });
 
 test('evaluateSmartRedirect handles all 5 error states and valid DIRECT/LANDING modes', () => {

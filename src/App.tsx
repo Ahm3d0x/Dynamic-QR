@@ -4,7 +4,13 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
+import {
+  getRedirectResult,
+  onAuthStateChanged,
+  signInWithPopup,
+  signInWithRedirect,
+  signOut,
+} from 'firebase/auth';
 import {
   collection,
   deleteDoc,
@@ -30,12 +36,12 @@ import {
   BarcodeRecord,
   PlanType,
   ScanLogRecord,
+  SuperAdminInviteRecord,
   UserProfile,
   UserRole,
 } from './types/qr';
 import {
   DEMO_ADMIN_USER,
-  DEMO_SUPER_ADMIN_USER,
   INITIAL_DEMO_BARCODES,
   INITIAL_DEMO_SCAN_LOGS,
   INITIAL_DEMO_USERS,
@@ -53,16 +59,26 @@ import { PlanManagerModal } from './components/PlanManagerModal';
 
 type ViewMode = 'HOME' | 'ADMIN' | 'SUPER_ADMIN' | 'REDIRECT';
 
+const PRIMARY_SUPER_ADMIN_EMAIL = 'ah2005211@gmail.com';
+
+function emailToInviteDocId(email: string): string {
+  return email
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, '_');
+}
+
 export default function App() {
   const [viewMode, setViewMode] = useState<ViewMode>('HOME');
   const [activeShortCode, setActiveShortCode] = useState<string>('');
   const [isFirebaseAuthed, setIsFirebaseAuthed] = useState<boolean>(false);
 
-  // State for users, barcodes, scanLogs
+  // State for users, barcodes, scanLogs, invites
   const [currentUser, setCurrentUser] = useState<UserProfile>(DEMO_ADMIN_USER);
   const [users, setUsers] = useState<UserProfile[]>(INITIAL_DEMO_USERS);
   const [barcodes, setBarcodes] = useState<BarcodeRecord[]>(INITIAL_DEMO_BARCODES);
   const [scanLogs, setScanLogs] = useState<ScanLogRecord[]>(INITIAL_DEMO_SCAN_LOGS);
+  const [invites, setInvites] = useState<SuperAdminInviteRecord[]>([]);
   const [remoteRedirectBarcode, setRemoteRedirectBarcode] = useState<BarcodeRecord | null>(null);
 
   // Modal states
@@ -71,6 +87,13 @@ export default function App() {
   const [printingBarcode, setPrintingBarcode] = useState<BarcodeRecord | null>(null);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [managingSubscriber, setManagingSubscriber] = useState<UserProfile | null>(null);
+
+  // Check any pending OAuth redirect result on startup (for mobile or popup-blocked browsers)
+  useEffect(() => {
+    getRedirectResult(auth).catch(() => {
+      // Ignore if no redirect was pending
+    });
+  }, []);
 
   // Inspect URL path or query parameters on boot (e.g. /r/QRD-8F3K9A or ?autostart=1)
   useEffect(() => {
@@ -104,7 +127,7 @@ export default function App() {
     return () => window.removeEventListener('popstate', handleRouteSync);
   }, []);
 
-  // Firebase Auth listener
+  // Firebase Auth listener with automatic Role Routing (ADMIN vs SUPER_ADMIN)
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       if (!fbUser) {
@@ -114,24 +137,31 @@ export default function App() {
 
       setIsFirebaseAuthed(true);
       const userPath = `users/${fbUser.uid}`;
+      const normalizedEmail = (fbUser.email || '').trim().toLowerCase();
+      const isPrimarySuperAdmin = normalizedEmail === PRIMARY_SUPER_ADMIN_EMAIL;
+
       try {
         const userRef = doc(db, 'users', fbUser.uid);
         const snap = await getDoc(userRef);
-        const isSuper = fbUser.email === 'ah2005211@gmail.com';
 
         if (!snap.exists()) {
-          const defaultTier = getPlanDefaults(isSuper ? 'ENTERPRISE' : 'FREE');
+          // 1. Default new user to ADMIN + FREE
+          const defaultTier = getPlanDefaults(isPrimarySuperAdmin ? 'ENTERPRISE' : 'FREE');
+          let assignedRole: UserRole = isPrimarySuperAdmin ? 'SUPER_ADMIN' : 'ADMIN';
+          let assignedPlan: PlanType = defaultTier.plan;
+
           const newProfile: UserProfile = {
             uid: fbUser.uid,
             name: (fbUser.displayName || 'QRDynamic User').slice(0, 100),
             email: (fbUser.email || 'user@qrdynamic.app').slice(0, 200),
-            role: isSuper ? 'SUPER_ADMIN' : 'ADMIN',
+            role: assignedRole,
             status: 'ACTIVE',
-            plan: defaultTier.plan,
+            plan: assignedPlan,
             maxBarcodes: defaultTier.maxBarcodes,
             maxScansPerBarcode: defaultTier.maxScansPerBarcode,
             allowDirectRedirect: defaultTier.allowDirectRedirect,
             allowWhiteLabel: defaultTier.allowWhiteLabel,
+            defaultRedirectDelaySeconds: defaultTier.defaultRedirectDelaySeconds,
           };
 
           await setDoc(userRef, {
@@ -139,15 +169,33 @@ export default function App() {
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
           });
-          setCurrentUser(newProfile);
-          if (viewMode === 'HOME') {
-            setViewMode(isSuper ? 'SUPER_ADMIN' : 'ADMIN');
+
+          // Check if a Super Admin pre-invited this email in /superAdminInvites/{inviteId}
+          if (!isPrimarySuperAdmin && normalizedEmail) {
+            try {
+              const invId = emailToInviteDocId(normalizedEmail);
+              const invSnap = await getDoc(doc(db, 'superAdminInvites', invId));
+              if (invSnap.exists()) {
+                const invData = invSnap.data() as SuperAdminInviteRecord;
+                assignedRole = invData.role;
+                assignedPlan = invData.plan;
+              }
+            } catch {
+              // Ignore invite lookup if none exists
+            }
+          }
+
+          setCurrentUser({ ...newProfile, role: assignedRole, plan: assignedPlan });
+          if (viewMode !== 'REDIRECT') {
+            setViewMode(assignedRole === 'SUPER_ADMIN' ? 'SUPER_ADMIN' : 'ADMIN');
           }
         } else {
           const data = snap.data() as UserProfile;
-          setCurrentUser(data);
-          if (viewMode === 'HOME') {
-            setViewMode(data.role === 'SUPER_ADMIN' ? 'SUPER_ADMIN' : 'ADMIN');
+          // Ensure primary database owner always has SUPER_ADMIN access
+          const effectiveRole: UserRole = isPrimarySuperAdmin ? 'SUPER_ADMIN' : data.role;
+          setCurrentUser({ ...data, role: effectiveRole });
+          if (viewMode !== 'REDIRECT') {
+            setViewMode(effectiveRole === 'SUPER_ADMIN' ? 'SUPER_ADMIN' : 'ADMIN');
           }
         }
       } catch (err) {
@@ -206,6 +254,8 @@ export default function App() {
     );
 
     let unsubUsers: (() => void) | undefined;
+    let unsubInvites: (() => void) | undefined;
+
     if (isSuper) {
       unsubUsers = onSnapshot(
         collection(db, 'users'),
@@ -222,12 +272,30 @@ export default function App() {
           handleFirestoreError(error, OperationType.LIST, 'users');
         }
       );
+
+      unsubInvites = onSnapshot(
+        collection(db, 'superAdminInvites'),
+        (snapshot) => {
+          const list: SuperAdminInviteRecord[] = [];
+          snapshot.forEach((docSnap) => {
+            list.push({
+              id: docSnap.id,
+              ...(docSnap.data() as Omit<SuperAdminInviteRecord, 'id'>),
+            });
+          });
+          setInvites(list);
+        },
+        (error) => {
+          handleFirestoreError(error, OperationType.LIST, 'superAdminInvites');
+        }
+      );
     }
 
     return () => {
       unsubBarcodes();
       unsubLogs();
       if (unsubUsers) unsubUsers();
+      if (unsubInvites) unsubInvites();
     };
   }, [isFirebaseAuthed, currentUser.role]);
 
@@ -248,7 +316,7 @@ export default function App() {
           setRemoteRedirectBarcode(docSnap.data() as BarcodeRecord);
         }
       } catch {
-        // Ignore offline/not found in demo mode
+        // Ignore offline/not found
       }
     }
     fetchRemoteCode();
@@ -276,26 +344,27 @@ export default function App() {
     } catch {
       // Ignore
     }
-    setViewMode('HOME');
-  };
-
-  // Google Sign-In handler
-  const handleGoogleLogin = async () => {
-    await signInWithPopup(auth, googleProvider);
-  };
-
-  // Instant Demo Role Preview handler
-  const handleEnterDemoWorkspace = (role: 'ADMIN' | 'SUPER_ADMIN') => {
-    if (role === 'SUPER_ADMIN') {
-      const superAccount =
-        users.find((u) => u.role === 'SUPER_ADMIN') || DEMO_SUPER_ADMIN_USER;
-      setCurrentUser(superAccount);
-      setViewMode('SUPER_ADMIN');
+    if (isFirebaseAuthed) {
+      setViewMode(currentUser.role === 'SUPER_ADMIN' ? 'SUPER_ADMIN' : 'ADMIN');
     } else {
-      const adminAccount =
-        users.find((u) => u.uid === 'demo-ahmed-01') || DEMO_ADMIN_USER;
-      setCurrentUser(adminAccount);
-      setViewMode('ADMIN');
+      setViewMode('HOME');
+    }
+  };
+
+  // Google Sign-In handler with automatic fallback to signInWithRedirect if popup is blocked
+  const handleGoogleLogin = async () => {
+    try {
+      await signInWithPopup(auth, googleProvider);
+    } catch (err: any) {
+      if (
+        err?.code === 'auth/popup-blocked' ||
+        err?.code === 'auth/cancelled-popup-request' ||
+        String(err?.message || '').includes('popup-blocked')
+      ) {
+        await signInWithRedirect(auth, googleProvider);
+        return;
+      }
+      throw err;
     }
   };
 
@@ -305,7 +374,6 @@ export default function App() {
   ) => {
     const nowIso = new Date().toISOString();
 
-    // Update local state immediately for snappy UX
     setBarcodes((prev) => {
       const exists = prev.some((b) => b.shortCode === payload.shortCode);
       if (exists) {
@@ -327,6 +395,7 @@ export default function App() {
             type: payload.type,
             destination: payload.destination,
             redirectMode: payload.redirectMode,
+            redirectDelaySeconds: payload.redirectDelaySeconds,
             welcomeMessage: payload.welcomeMessage,
             ctaText: payload.ctaText,
             qrColor: payload.qrColor,
@@ -441,7 +510,6 @@ export default function App() {
     const newLogId = `scan-${Date.now()}`;
     const deviceSummary = `${navigator.platform || 'Browser'} · Smart Redirect Engine`;
 
-    // Optimistic local state update
     setBarcodes((prev) =>
       prev.map((b) =>
         b.shortCode === shortCode ? { ...b, scanCount: b.scanCount + 1 } : b
@@ -459,7 +527,7 @@ export default function App() {
       ...prev,
     ]);
 
-    if (isFirebaseAuthed) {
+    if (!target.ownerId.startsWith('demo-')) {
       const barcodeRef = doc(db, 'barcodes', shortCode);
       const scanLogRef = doc(db, 'scanLogs', newLogId);
       try {
@@ -488,7 +556,7 @@ export default function App() {
           });
         });
       } catch {
-        // Non-fatal in demo mode if barcode document is local-only
+        // Non-fatal in offline/demo mode
       }
     }
   };
@@ -503,28 +571,43 @@ export default function App() {
       | 'maxScansPerBarcode'
       | 'allowDirectRedirect'
       | 'allowWhiteLabel'
+      | 'defaultRedirectDelaySeconds'
       | 'status'
       | 'role'
     >
   ) => {
+    const resolvedDelay =
+      typeof updates.defaultRedirectDelaySeconds === 'number'
+        ? updates.defaultRedirectDelaySeconds
+        : getPlanDefaults(updates.plan).defaultRedirectDelaySeconds;
+
+    const normalizedUpdates = {
+      ...updates,
+      defaultRedirectDelaySeconds: resolvedDelay,
+    };
+
     setUsers((prev) =>
-      prev.map((u) => (u.uid === uid ? { ...u, ...updates } : u))
+      prev.map((u) => (u.uid === uid ? { ...u, ...normalizedUpdates } : u))
     );
 
     if (currentUser.uid === uid) {
-      setCurrentUser((prev) => ({ ...prev, ...updates }));
+      setCurrentUser((prev) => ({ ...prev, ...normalizedUpdates }));
     }
 
-    // Synchronize ownerStatus and maxScansLimit across all barcodes owned by this subscriber
+    const ownedBarcodes = barcodes.filter((b) => b.ownerId === uid);
+
     setBarcodes((prev) =>
       prev.map((b) =>
         b.ownerId === uid
           ? {
               ...b,
-              ownerStatus: updates.status,
-              maxScansLimit: updates.maxScansPerBarcode,
-              redirectMode: updates.allowDirectRedirect ? b.redirectMode : 'LANDING',
-              hideBranding: updates.allowWhiteLabel ? b.hideBranding : false,
+              ownerStatus: normalizedUpdates.status,
+              maxScansLimit: normalizedUpdates.maxScansPerBarcode,
+              redirectMode: normalizedUpdates.allowDirectRedirect ? b.redirectMode : 'LANDING',
+              redirectDelaySeconds: normalizedUpdates.allowDirectRedirect
+                ? b.redirectDelaySeconds
+                : resolvedDelay,
+              hideBranding: normalizedUpdates.allowWhiteLabel ? b.hideBranding : false,
             }
           : b
       )
@@ -534,11 +617,99 @@ export default function App() {
       const userPath = `users/${uid}`;
       try {
         await updateDoc(doc(db, 'users', uid), {
-          ...updates,
+          ...normalizedUpdates,
           updatedAt: serverTimestamp(),
         });
+        await Promise.all(
+          ownedBarcodes.map((b) =>
+            updateDoc(doc(db, 'barcodes', b.shortCode), {
+              ownerStatus: normalizedUpdates.status,
+              maxScansLimit: normalizedUpdates.maxScansPerBarcode,
+              redirectMode: normalizedUpdates.allowDirectRedirect ? b.redirectMode : 'LANDING',
+              redirectDelaySeconds: normalizedUpdates.allowDirectRedirect
+                ? typeof b.redirectDelaySeconds === 'number'
+                  ? b.redirectDelaySeconds
+                  : resolvedDelay
+                : resolvedDelay,
+              hideBranding: normalizedUpdates.allowWhiteLabel ? b.hideBranding : false,
+              updatedAt: serverTimestamp(),
+            }).catch(() => {
+              // Ignore individual barcode sync failure
+            })
+          )
+        );
       } catch (err) {
         handleFirestoreError(err, OperationType.UPDATE, userPath);
+      }
+    }
+  };
+
+  // Super Admin: Grant Email Permission or Invite New Admin/Super Admin
+  const handleGrantEmailPermission = async (
+    email: string,
+    role: UserRole,
+    plan: PlanType
+  ) => {
+    const cleanedEmail = email.trim().toLowerCase();
+    const defaults = getPlanDefaults(plan);
+
+    // 1. If the user already exists in `users`, upgrade their role and plan immediately
+    const existingUser = users.find(
+      (u) => u.email.trim().toLowerCase() === cleanedEmail
+    );
+    if (existingUser) {
+      await handleSaveSubscriberPlan(existingUser.uid, {
+        role,
+        plan,
+        maxBarcodes: defaults.maxBarcodes,
+        maxScansPerBarcode: defaults.maxScansPerBarcode,
+        allowDirectRedirect: defaults.allowDirectRedirect,
+        allowWhiteLabel: defaults.allowWhiteLabel,
+        defaultRedirectDelaySeconds: defaults.defaultRedirectDelaySeconds,
+        status: 'ACTIVE',
+      });
+    }
+
+    // 2. Also save in `superAdminInvites` so if they haven't logged in yet, they receive the role upon first login
+    const inviteId = emailToInviteDocId(cleanedEmail);
+    const newInvite: SuperAdminInviteRecord = {
+      id: inviteId,
+      email: cleanedEmail,
+      role,
+      plan,
+      invitedBy: currentUser.email,
+      createdAt: new Date().toISOString(),
+    };
+
+    setInvites((prev) => [
+      newInvite,
+      ...prev.filter((inv) => inv.id !== inviteId),
+    ]);
+
+    if (isFirebaseAuthed && auth.currentUser) {
+      const invitePath = `superAdminInvites/${inviteId}`;
+      try {
+        await setDoc(doc(db, 'superAdminInvites', inviteId), {
+          email: cleanedEmail,
+          role,
+          plan,
+          invitedBy: currentUser.email,
+          createdAt: serverTimestamp(),
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, invitePath);
+      }
+    }
+  };
+
+  const handleRevokeInvite = async (inviteId: string) => {
+    setInvites((prev) => prev.filter((i) => i.id !== inviteId));
+    if (isFirebaseAuthed && auth.currentUser) {
+      const invitePath = `superAdminInvites/${inviteId}`;
+      try {
+        await deleteDoc(doc(db, 'superAdminInvites', inviteId));
+      } catch (err) {
+        handleFirestoreError(err, OperationType.DELETE, invitePath);
       }
     }
   };
@@ -552,6 +723,7 @@ export default function App() {
       maxScansPerBarcode: subscriber.maxScansPerBarcode,
       allowDirectRedirect: subscriber.allowDirectRedirect,
       allowWhiteLabel: subscriber.allowWhiteLabel,
+      defaultRedirectDelaySeconds: subscriber.defaultRedirectDelaySeconds,
       role: subscriber.role,
       status: nextStatus,
     });
@@ -591,7 +763,6 @@ export default function App() {
       {viewMode === 'HOME' && (
         <PublicHomeView
           onGoogleLogin={handleGoogleLogin}
-          onEnterDemoWorkspace={handleEnterDemoWorkspace}
           onOpenScanner={() => setScannerOpen(true)}
           onResolveShortCode={navigateToRedirect}
         />
@@ -616,23 +787,30 @@ export default function App() {
           onSoftDeleteBarcode={handleSoftDeleteBarcode}
           onRestoreBarcode={handleRestoreBarcode}
           onSimulateScan={navigateToRedirect}
-          onSwitchToSuperAdmin={() => handleEnterDemoWorkspace('SUPER_ADMIN')}
+          onSwitchToSuperAdmin={
+            currentUser.role === 'SUPER_ADMIN'
+              ? () => setViewMode('SUPER_ADMIN')
+              : undefined
+          }
           onUpdateDisplayName={handleUpdateDisplayName}
           onSignOut={handleSignOut}
         />
       )}
 
-      {viewMode === 'SUPER_ADMIN' && (
+      {viewMode === 'SUPER_ADMIN' && currentUser.role === 'SUPER_ADMIN' && (
         <SuperAdminView
           currentUser={currentUser}
           users={users}
           barcodes={barcodes}
+          invites={invites}
           onOpenPlanManager={(sub) => setManagingSubscriber(sub)}
           onToggleSubscriberStatus={handleToggleSubscriberStatus}
+          onGrantEmailPermission={handleGrantEmailPermission}
+          onRevokeInvite={handleRevokeInvite}
           onToggleBarcodeActive={handleToggleBarcodeActive}
           onHardDeleteBarcode={handleHardDeleteBarcode}
           onPreviewBarcodeLanding={navigateToRedirect}
-          onSwitchToAdminDashboard={() => handleEnterDemoWorkspace('ADMIN')}
+          onSwitchToAdminDashboard={() => setViewMode('ADMIN')}
           onSignOut={handleSignOut}
         />
       )}

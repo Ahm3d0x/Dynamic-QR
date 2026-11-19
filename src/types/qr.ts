@@ -15,6 +15,7 @@ export interface UserProfile {
   maxScansPerBarcode: number;
   allowDirectRedirect: boolean;
   allowWhiteLabel: boolean;
+  defaultRedirectDelaySeconds?: number;
   createdAt?: any;
   updatedAt?: any;
 }
@@ -28,6 +29,7 @@ export interface BarcodeRecord {
   type: ContentType;
   destination: string;
   redirectMode: RedirectMode;
+  redirectDelaySeconds?: number;
   welcomeMessage: string;
   ctaText: string;
   qrColor: string;
@@ -75,6 +77,15 @@ export interface TextPromoData {
   headline: string;
   body: string;
   promoCode: string;
+}
+
+export interface SuperAdminInviteRecord {
+  id: string;
+  email: string;
+  role: UserRole;
+  plan: PlanType;
+  invitedBy: string;
+  createdAt?: any;
 }
 
 export type RedirectValidationState =

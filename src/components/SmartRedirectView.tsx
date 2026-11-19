@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   AlertOctagon,
   ArrowLeft,
   ArrowRight,
   Check,
+  Clock,
   Copy,
   Download,
   ExternalLink,
@@ -17,6 +18,7 @@ import {
   ShieldAlert,
   Utensils,
   Wifi,
+  XCircle,
 } from 'lucide-react';
 import { BarcodeRecord } from '../types/qr';
 import {
@@ -27,6 +29,7 @@ import {
   parseTextPromo,
   parseVCard,
   parseWifi,
+  resolveAutoRedirectDelay,
 } from '../utils/qrLogic';
 
 interface SmartRedirectViewProps {
@@ -45,7 +48,12 @@ export const SmartRedirectView: React.FC<SmartRedirectViewProps> = ({
   const [scanRegistered, setScanRegistered] = useState(false);
   const [copiedToken, setCopiedToken] = useState(false);
   const [imageOpened, setImageOpened] = useState(false);
-  const [directCountdown, setDirectCountdown] = useState<number | null>(null);
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
+  const [totalDelay, setTotalDelay] = useState<number | null>(null);
+  const [autoRedirectCancelled, setAutoRedirectCancelled] = useState(false);
+
+  const scanPromiseRef = useRef<Promise<void> | null>(null);
+  const hasRedirectedRef = useRef(false);
 
   const validation = evaluateSmartRedirect(barcode);
 
@@ -53,27 +61,72 @@ export const SmartRedirectView: React.FC<SmartRedirectViewProps> = ({
     setScanRegistered(false);
     setCopiedToken(false);
     setImageOpened(false);
-    setDirectCountdown(null);
+    setSecondsLeft(null);
+    setTotalDelay(null);
+    setAutoRedirectCancelled(false);
+    scanPromiseRef.current = null;
+    hasRedirectedRef.current = false;
   }, [shortCode]);
 
   useEffect(() => {
     if (validation.status === 'OK' && !scanRegistered) {
       setScanRegistered(true);
-      onRegisterAtomicScan(validation.barcode.shortCode);
+      scanPromiseRef.current = Promise.resolve(
+        onRegisterAtomicScan(validation.barcode.shortCode)
+      ).catch(() => {
+        // Never block visitor redirect if scan logging fails offline
+      });
 
-      if (validation.mode === 'DIRECT') {
-        setDirectCountdown(2);
+      const autoDelay = resolveAutoRedirectDelay(validation.barcode);
+      if (autoDelay !== null) {
+        setTotalDelay(autoDelay);
+        setSecondsLeft(autoDelay);
       }
     }
-  }, [validation.status, scanRegistered]);
+  }, [validation.status, scanRegistered, onRegisterAtomicScan]);
 
+  // Execute live countdown and automatic redirection for URL QR codes
   useEffect(() => {
-    if (directCountdown === null || directCountdown <= 0) return;
+    if (
+      validation.status !== 'OK' ||
+      validation.barcode.type !== 'URL' ||
+      secondsLeft === null ||
+      autoRedirectCancelled ||
+      hasRedirectedRef.current
+    ) {
+      return;
+    }
+
+    const destinationUrl = validation.barcode.destination;
+
+    if (secondsLeft <= 0) {
+      hasRedirectedRef.current = true;
+      let cancelled = false;
+
+      const performRedirect = async () => {
+        if (scanPromiseRef.current) {
+          await Promise.race([
+            scanPromiseRef.current,
+            new Promise<void>((resolve) => setTimeout(resolve, 450)),
+          ]);
+        }
+        if (!cancelled) {
+          window.location.replace(destinationUrl);
+        }
+      };
+
+      performRedirect();
+      return () => {
+        cancelled = true;
+      };
+    }
+
     const timer = setTimeout(() => {
-      setDirectCountdown((prev) => (prev !== null ? prev - 1 : null));
-    }, 900);
+      setSecondsLeft((prev) => (prev !== null ? Math.max(0, prev - 1) : null));
+    }, 1000);
+
     return () => clearTimeout(timer);
-  }, [directCountdown]);
+  }, [validation, secondsLeft, autoRedirectCancelled]);
 
   const handleCopyText = async (text: string) => {
     try {
@@ -230,20 +283,60 @@ export const SmartRedirectView: React.FC<SmartRedirectViewProps> = ({
                 <Globe className="w-7 h-7" />
               </div>
               <p className="text-xs font-mono text-[#2E6B3E]">
-                Direct Redirect Mode · Atomic Scan Verified
+                Direct Auto-Routing · Atomic Scan Verified
               </p>
               <h1 className="text-2xl font-bold text-[#292824]">{activeBarcode.title}</h1>
-              <p className="text-sm text-[#6E6A63]">
-                {directCountdown && directCountdown > 0
-                  ? `Redirecting you automatically in ${directCountdown}s...`
-                  : 'Destination verified and ready to open:'}
-              </p>
+
+              {totalDelay !== null && !autoRedirectCancelled ? (
+                <div className="p-3.5 bg-[#F8F5EF] border border-[#E6E0D6] rounded-2xl space-y-2.5 text-left">
+                  <div className="flex items-center justify-between gap-2 text-xs">
+                    <span className="inline-flex items-center gap-1.5 font-semibold text-[#292824]">
+                      <Clock className="w-3.5 h-3.5 text-[#D97745]" />
+                      {secondsLeft && secondsLeft > 0 ? (
+                        <span>
+                          Redirecting automatically in{' '}
+                          <strong className="font-mono text-[#D97745] tabular-nums">
+                            {secondsLeft}s
+                          </strong>
+                        </span>
+                      ) : (
+                        <span>Redirecting instantly...</span>
+                      )}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setAutoRedirectCancelled(true)}
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#6E6A63] hover:text-[#292824] cursor-pointer"
+                    >
+                      <XCircle className="w-3.5 h-3.5" />
+                      <span>Cancel</span>
+                    </button>
+                  </div>
+                  {totalDelay > 0 && secondsLeft !== null && (
+                    <div className="w-full h-1.5 bg-[#E6E0D6] rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-[#D97745] transition-all duration-1000 ease-linear"
+                        style={{
+                          width: `${Math.min(
+                            100,
+                            Math.max(8, ((totalDelay - secondsLeft) / totalDelay) * 100)
+                          )}%`,
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs text-[#6E6A63]">
+                  Auto-redirect paused · Click below whenever you are ready.
+                </p>
+              )}
+
               <div className="p-3 bg-[#F8F5EF] border border-[#E6E0D6] rounded-xl text-xs font-mono text-[#292824] truncate">
                 {activeBarcode.destination}
               </div>
               <a
                 href={activeBarcode.destination}
-                target="_blank"
                 rel="noopener noreferrer"
                 className="w-full inline-flex items-center justify-center gap-2 py-3 px-6 bg-[#D97745] hover:bg-[#c56737] text-white text-sm font-semibold rounded-2xl transition-colors"
               >
@@ -253,7 +346,7 @@ export const SmartRedirectView: React.FC<SmartRedirectViewProps> = ({
             </div>
           )}
 
-          {/* LANDING MODE — URL */}
+          {/* LANDING MODE — URL (With Automatic Redirect Countdown) */}
           {validation.mode === 'LANDING' && activeBarcode.type === 'URL' && (
             <div className="space-y-5">
               <div className="w-14 h-14 rounded-2xl bg-[#D97745] text-white flex items-center justify-center mx-auto shadow-xs">
@@ -263,12 +356,59 @@ export const SmartRedirectView: React.FC<SmartRedirectViewProps> = ({
                 <h1 className="text-2xl font-bold text-[#292824]">{activeBarcode.title}</h1>
                 <p className="text-sm text-[#6E6A63] mt-1.5">{activeBarcode.welcomeMessage}</p>
               </div>
+
+              {totalDelay !== null && !autoRedirectCancelled ? (
+                <div className="p-3.5 bg-[#F8F5EF] border border-[#E6E0D6] rounded-2xl space-y-2.5 text-left">
+                  <div className="flex items-center justify-between gap-2 text-xs">
+                    <span className="inline-flex items-center gap-1.5 font-semibold text-[#292824]">
+                      <Clock className="w-3.5 h-3.5 text-[#D97745]" />
+                      {secondsLeft && secondsLeft > 0 ? (
+                        <span>
+                          Redirecting automatically in{' '}
+                          <strong className="font-mono text-[#D97745] tabular-nums">
+                            {secondsLeft}s
+                          </strong>
+                        </span>
+                      ) : (
+                        <span>Opening destination now...</span>
+                      )}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setAutoRedirectCancelled(true)}
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#6E6A63] hover:text-[#292824] cursor-pointer"
+                    >
+                      <XCircle className="w-3.5 h-3.5" />
+                      <span>Cancel</span>
+                    </button>
+                  </div>
+                  {totalDelay > 0 && secondsLeft !== null && (
+                    <div className="w-full h-1.5 bg-[#E6E0D6] rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-[#D97745] transition-all duration-1000 ease-linear"
+                        style={{
+                          width: `${Math.min(
+                            100,
+                            Math.max(8, ((totalDelay - secondsLeft) / totalDelay) * 100)
+                          )}%`,
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              ) : (
+                autoRedirectCancelled && (
+                  <p className="text-xs text-[#6E6A63]">
+                    Auto-redirect paused · Click the button below to continue.
+                  </p>
+                )
+              )}
+
               <div className="px-4 py-2.5 bg-[#F8F5EF] border border-[#E6E0D6] rounded-xl text-xs font-mono text-[#6E6A63] truncate">
                 {activeBarcode.destination}
               </div>
               <a
                 href={activeBarcode.destination}
-                target="_blank"
                 rel="noopener noreferrer"
                 className="w-full inline-flex items-center justify-center gap-2 py-3.5 px-6 bg-[#D97745] hover:bg-[#c56737] text-white text-sm font-semibold rounded-2xl transition-colors"
               >

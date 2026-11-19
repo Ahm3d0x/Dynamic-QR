@@ -19,6 +19,7 @@ export interface PlanDefaults {
   maxScansPerBarcode: number;
   allowDirectRedirect: boolean;
   allowWhiteLabel: boolean;
+  defaultRedirectDelaySeconds: number;
 }
 
 export const PLAN_CATALOG: Record<PlanType, PlanDefaults> = {
@@ -30,6 +31,7 @@ export const PLAN_CATALOG: Record<PlanType, PlanDefaults> = {
     maxScansPerBarcode: 500,
     allowDirectRedirect: false,
     allowWhiteLabel: false,
+    defaultRedirectDelaySeconds: 5,
   },
   PRO: {
     plan: 'PRO',
@@ -39,6 +41,7 @@ export const PLAN_CATALOG: Record<PlanType, PlanDefaults> = {
     maxScansPerBarcode: 10000,
     allowDirectRedirect: true,
     allowWhiteLabel: true,
+    defaultRedirectDelaySeconds: 2,
   },
   ENTERPRISE: {
     plan: 'ENTERPRISE',
@@ -48,6 +51,7 @@ export const PLAN_CATALOG: Record<PlanType, PlanDefaults> = {
     maxScansPerBarcode: 1000000,
     allowDirectRedirect: true,
     allowWhiteLabel: true,
+    defaultRedirectDelaySeconds: 0,
   },
   CUSTOM: {
     plan: 'CUSTOM',
@@ -57,6 +61,7 @@ export const PLAN_CATALOG: Record<PlanType, PlanDefaults> = {
     maxScansPerBarcode: 50000,
     allowDirectRedirect: true,
     allowWhiteLabel: true,
+    defaultRedirectDelaySeconds: 3,
   },
 };
 
@@ -109,15 +114,48 @@ export function canUserCreateBarcode(user: Pick<UserProfile, 'status' | 'maxBarc
   return { allowed: true };
 }
 
+export function clampRedirectDelay(seconds: number): number {
+  if (!Number.isFinite(seconds)) return 5;
+  return Math.min(30, Math.max(0, Math.round(seconds)));
+}
+
 export function enforcePlanFeatureConstraints(
-  user: Pick<UserProfile, 'allowDirectRedirect' | 'allowWhiteLabel'>,
+  user: Pick<UserProfile, 'allowDirectRedirect' | 'allowWhiteLabel' | 'defaultRedirectDelaySeconds'>,
   requestedMode: RedirectMode,
-  requestedHideBranding: boolean
-): { redirectMode: RedirectMode; hideBranding: boolean } {
+  requestedHideBranding: boolean,
+  requestedDelaySeconds?: number
+): { redirectMode: RedirectMode; hideBranding: boolean; redirectDelaySeconds: number } {
+  const planLockedDelay =
+    typeof user.defaultRedirectDelaySeconds === 'number'
+      ? clampRedirectDelay(user.defaultRedirectDelaySeconds)
+      : user.allowDirectRedirect
+      ? 0
+      : 5;
+
+  const effectiveMode: RedirectMode = user.allowDirectRedirect ? requestedMode : 'LANDING';
+  const effectiveDelay = user.allowDirectRedirect
+    ? typeof requestedDelaySeconds === 'number'
+      ? clampRedirectDelay(requestedDelaySeconds)
+      : effectiveMode === 'DIRECT'
+      ? 0
+      : planLockedDelay
+    : planLockedDelay;
+
   return {
-    redirectMode: user.allowDirectRedirect ? requestedMode : 'LANDING',
+    redirectMode: effectiveMode,
     hideBranding: user.allowWhiteLabel ? requestedHideBranding : false,
+    redirectDelaySeconds: effectiveDelay,
   };
+}
+
+export function resolveAutoRedirectDelay(
+  barcode: Pick<BarcodeRecord, 'type' | 'redirectMode' | 'redirectDelaySeconds'>
+): number | null {
+  if (barcode.type !== 'URL') return null;
+  if (typeof barcode.redirectDelaySeconds === 'number' && Number.isFinite(barcode.redirectDelaySeconds)) {
+    return clampRedirectDelay(barcode.redirectDelaySeconds);
+  }
+  return barcode.redirectMode === 'DIRECT' ? 0 : 5;
 }
 
 export function validateDestinationPayload(type: ContentType, destination: string): boolean {

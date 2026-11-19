@@ -46,6 +46,9 @@
         "allowWhiteLabel": {
           "type": "boolean"
         },
+        "defaultRedirectDelaySeconds": {
+          "type": "number"
+        },
         "createdAt": {
           "type": "string",
           "format": "date-time"
@@ -111,6 +114,9 @@
           "type": "string",
           "enum": ["DIRECT", "LANDING"],
           "maxLength": 20
+        },
+        "redirectDelaySeconds": {
+          "type": "number"
         },
         "welcomeMessage": {
           "type": "string",
@@ -227,6 +233,43 @@
         "maintenanceMode",
         "updatedAt"
       ]
+    },
+    "SuperAdminInvite": {
+      "title": "SuperAdminInvite",
+      "description": "Pre-authorized email invitation or permission grant configured by a Super Admin.",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 200
+        },
+        "role": {
+          "type": "string",
+          "enum": ["ADMIN", "SUPER_ADMIN"],
+          "maxLength": 20
+        },
+        "plan": {
+          "type": "string",
+          "enum": ["FREE", "PRO", "ENTERPRISE", "CUSTOM"],
+          "maxLength": 20
+        },
+        "invitedBy": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "email",
+        "role",
+        "plan",
+        "invitedBy",
+        "createdAt"
+      ]
     }
   },
   "firestore": {
@@ -245,6 +288,10 @@
     "/platformSettings/{settingId}": {
       "schema": { "$ref": "#/entities/PlatformSetting" },
       "description": "Platform settings managed by Super Admins."
+    },
+    "/superAdminInvites/{inviteId}": {
+      "schema": { "$ref": "#/entities/SuperAdminInvite" },
+      "description": "Email invitations and role grants managed exclusively by Super Admins."
     }
   }
 }

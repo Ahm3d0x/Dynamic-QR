@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Crown, X, Check } from 'lucide-react';
 import { AccountStatus, PlanType, UserProfile, UserRole } from '../types/qr';
-import { getPlanDefaults } from '../utils/qrLogic';
+import { clampRedirectDelay, getPlanDefaults } from '../utils/qrLogic';
 
 interface PlanManagerModalProps {
   subscriber: UserProfile | null;
@@ -15,6 +15,7 @@ interface PlanManagerModalProps {
       | 'maxScansPerBarcode'
       | 'allowDirectRedirect'
       | 'allowWhiteLabel'
+      | 'defaultRedirectDelaySeconds'
       | 'status'
       | 'role'
     >
@@ -31,6 +32,7 @@ export const PlanManagerModal: React.FC<PlanManagerModalProps> = ({
   const [maxScansPerBarcode, setMaxScansPerBarcode] = useState<number>(500);
   const [allowDirectRedirect, setAllowDirectRedirect] = useState<boolean>(false);
   const [allowWhiteLabel, setAllowWhiteLabel] = useState<boolean>(false);
+  const [defaultRedirectDelaySeconds, setDefaultRedirectDelaySeconds] = useState<number>(5);
   const [status, setStatus] = useState<AccountStatus>('ACTIVE');
   const [role, setRole] = useState<UserRole>('ADMIN');
   const [saving, setSaving] = useState(false);
@@ -42,6 +44,11 @@ export const PlanManagerModal: React.FC<PlanManagerModalProps> = ({
     setMaxScansPerBarcode(subscriber.maxScansPerBarcode);
     setAllowDirectRedirect(subscriber.allowDirectRedirect);
     setAllowWhiteLabel(subscriber.allowWhiteLabel);
+    setDefaultRedirectDelaySeconds(
+      typeof subscriber.defaultRedirectDelaySeconds === 'number'
+        ? clampRedirectDelay(subscriber.defaultRedirectDelaySeconds)
+        : getPlanDefaults(subscriber.plan).defaultRedirectDelaySeconds
+    );
     setStatus(subscriber.status);
     setRole(subscriber.role);
   }, [subscriber]);
@@ -56,6 +63,7 @@ export const PlanManagerModal: React.FC<PlanManagerModalProps> = ({
       setMaxScansPerBarcode(defaults.maxScansPerBarcode);
       setAllowDirectRedirect(defaults.allowDirectRedirect);
       setAllowWhiteLabel(defaults.allowWhiteLabel);
+      setDefaultRedirectDelaySeconds(defaults.defaultRedirectDelaySeconds);
     }
   };
 
@@ -69,6 +77,7 @@ export const PlanManagerModal: React.FC<PlanManagerModalProps> = ({
         maxScansPerBarcode: Math.max(1, Number(maxScansPerBarcode) || 1),
         allowDirectRedirect,
         allowWhiteLabel,
+        defaultRedirectDelaySeconds: clampRedirectDelay(Number(defaultRedirectDelaySeconds)),
         status,
         role,
       });
@@ -193,6 +202,33 @@ export const PlanManagerModal: React.FC<PlanManagerModalProps> = ({
                 className="w-4 h-4 accent-[#D97745]"
               />
             </label>
+          </div>
+
+          <div>
+            <label
+              htmlFor="redirect-delay-input"
+              className="block text-xs font-semibold text-[#292824] mb-1.5"
+            >
+              Auto-Redirect Delay (seconds · 0 = instant)
+            </label>
+            <div className="flex items-center gap-2.5">
+              <input
+                id="redirect-delay-input"
+                type="number"
+                min={0}
+                max={30}
+                value={defaultRedirectDelaySeconds}
+                onChange={(e) => {
+                  setDefaultRedirectDelaySeconds(clampRedirectDelay(Number(e.target.value)));
+                }}
+                className="w-24 px-3.5 py-2 bg-[#F8F5EF] border border-[#E6E0D6] rounded-xl text-sm font-mono tabular-nums"
+              />
+              <span className="text-[11px] text-[#6E6A63]">
+                {allowDirectRedirect
+                  ? 'Default timer (subscriber can customize 0–30s per URL QR)'
+                  : 'Fixed enforced timer for this subscriber (locked on Free)'}
+              </span>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">

@@ -21,7 +21,6 @@ import { PLAN_CATALOG, normalizeShortCodeInput } from '../utils/qrLogic';
 
 interface PublicHomeViewProps {
   onGoogleLogin: () => Promise<void>;
-  onEnterDemoWorkspace: (role: 'ADMIN' | 'SUPER_ADMIN') => void;
   onOpenScanner: () => void;
   onResolveShortCode: (shortCode: string) => void;
 }
@@ -93,13 +92,13 @@ const SHOWCASE_TYPES: {
 
 export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
   onGoogleLogin,
-  onEnterDemoWorkspace,
   onOpenScanner,
   onResolveShortCode,
 }) => {
   const [shortIdSearch, setShortIdSearch] = useState('');
   const [showSignInModal, setShowSignInModal] = useState(false);
   const [authError, setAuthError] = useState('');
+  const [isSigningIn, setIsSigningIn] = useState(false);
 
   const handleLookupSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,12 +109,15 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
 
   const handleGoogleClick = async () => {
     setAuthError('');
+    setIsSigningIn(true);
     try {
       await onGoogleLogin();
     } catch (err: any) {
       setAuthError(
-        err?.message || 'Google Sign-In popup could not complete. You can also explore the live workspace.'
+        err?.message || 'Unable to complete Google Sign-In. Please allow popups or try again.'
       );
+    } finally {
+      setIsSigningIn(false);
     }
   };
 
@@ -173,7 +175,7 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
         </div>
       </header>
 
-      {/* Hero Split Section matching Image 2 top-left */}
+      {/* Hero Split Section */}
       <section id="top" className="max-w-7xl mx-auto px-6 pt-12 pb-16">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
           <div className="lg:col-span-7 space-y-6">
@@ -185,13 +187,13 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
             </h1>
             <p className="text-base sm:text-lg text-[#6E6A63] max-w-xl leading-relaxed">
               Create, manage, and update your QR code destinations anytime without reprinting.
-              Built with atomic scan limits, 6 dynamic content engines, and multi-role access control.
+              Built with atomic scan limits, 6 dynamic content engines, and cloud analytics.
             </p>
 
             <div className="flex flex-wrap items-center gap-3 pt-1">
               <button
                 type="button"
-                onClick={() => onEnterDemoWorkspace('ADMIN')}
+                onClick={() => setShowSignInModal(true)}
                 className="inline-flex items-center gap-2 px-6 py-3.5 bg-[#D97745] hover:bg-[#c56737] text-white text-sm font-bold rounded-2xl transition-colors cursor-pointer whitespace-nowrap"
               >
                 <span>Get Started Free</span>
@@ -284,7 +286,7 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
           </div>
         </div>
 
-        {/* 4 Feature Strip below Hero matching mockup */}
+        {/* 4 Feature Strip below Hero */}
         <div
           id="architecture"
           className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-12 pt-8 border-t border-[#E6E0D6]"
@@ -303,7 +305,7 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
             {
               icon: ShieldCheck,
               title: 'Secure & Reliable',
-              desc: 'Role-based security rules & instant account suspension sync',
+              desc: 'Cloud security rules & instant account status synchronization',
             },
             {
               icon: Cloud,
@@ -330,7 +332,7 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
         </div>
       </section>
 
-      {/* Section 2: 6 Dynamic Content Types Showcase (Matching Image 1 "One QR ... Endless Possibilities") */}
+      {/* Section 2: 6 Dynamic Content Types Showcase */}
       <section id="content-types" className="max-w-7xl mx-auto px-6 py-14 border-t border-[#E6E0D6]">
         <div className="text-center max-w-2xl mx-auto mb-10">
           <p className="text-xs font-semibold text-[#D97745] mb-1">
@@ -466,14 +468,14 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
 
                 <button
                   type="button"
-                  onClick={() => onEnterDemoWorkspace('ADMIN')}
+                  onClick={() => setShowSignInModal(true)}
                   className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
                     highlighted
                       ? 'bg-[#D97745] hover:bg-[#c56737] text-white'
                       : 'bg-[#F8F5EF] hover:bg-[#EFECE6] text-[#292824] border border-[#E6E0D6]'
                   }`}
                 >
-                  Open {tier.label} Workspace
+                  Get Started with {tier.label}
                 </button>
               </div>
             );
@@ -492,7 +494,7 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
         </div>
       </footer>
 
-      {/* Sign-In Card Modal matching Image 2 top-center ("Welcome Back! Continue with Google") */}
+      {/* Clean Google Sign-In Modal — No mention of Super Admin or Role Preview */}
       {showSignInModal && (
         <div
           className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4"
@@ -514,49 +516,35 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
               Welcome Back!
             </h2>
             <p className="text-xs text-[#6E6A63] mt-1 mb-6">
-              Sign in to continue to your dashboard
+              Sign in with your Google account to continue to your dashboard
             </p>
 
             <button
               type="button"
+              disabled={isSigningIn}
               onClick={handleGoogleClick}
-              className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-[#F8F5EF] hover:bg-[#EFECE6] border border-[#E6E0D6] rounded-2xl text-sm font-bold text-[#292824] transition-colors cursor-pointer"
+              className="w-full flex items-center justify-center gap-3 py-3.5 px-5 bg-[#D97745] hover:bg-[#c56737] text-white rounded-2xl text-sm font-bold transition-colors cursor-pointer disabled:opacity-60"
             >
-              <Globe className="w-4 h-4 text-[#D97745]" />
-              <span>Continue with Google</span>
+              <Globe className="w-4 h-4" />
+              <span>{isSigningIn ? 'Connecting to Google...' : 'Continue with Google'}</span>
             </button>
 
-            <div className="my-5 flex items-center gap-3 text-xs text-[#6E6A63]">
-              <div className="flex-1 h-px bg-[#E6E0D6]" />
-              <span>or instant role preview</span>
-              <div className="flex-1 h-px bg-[#E6E0D6]" />
-            </div>
-
-            <div className="grid grid-cols-2 gap-2.5">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowSignInModal(false);
-                  onEnterDemoWorkspace('ADMIN');
-                }}
-                className="py-2.5 px-3 bg-[#D97745] hover:bg-[#c56737] text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
-              >
-                Subscriber (Admin)
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowSignInModal(false);
-                  onEnterDemoWorkspace('SUPER_ADMIN');
-                }}
-                className="py-2.5 px-3 bg-[#233229] hover:bg-[#1a261f] text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
-              >
-                Super Admin
-              </button>
+            <div className="my-6 p-5 bg-[#F8F5EF] border border-[#E6E0D6] rounded-2xl flex flex-col items-center">
+              <div className="bg-white p-3 rounded-xl border border-[#E6E0D6] mb-2">
+                <QRCodeSVG
+                  value="https://dynamicqr-one.vercel.app"
+                  size={88}
+                  fgColor="#292824"
+                  bgColor="#FFFFFF"
+                />
+              </div>
+              <span className="text-[11px] text-[#6E6A63]">
+                Instant Cloud Sync · Dynamic QR Engine
+              </span>
             </div>
 
             {authError && (
-              <p className="mt-4 text-xs text-red-700 bg-red-50 p-2.5 rounded-xl border border-red-200">
+              <p className="mt-4 text-xs text-red-700 bg-red-50 p-3 rounded-xl border border-red-200">
                 {authError}
               </p>
             )}
@@ -564,7 +552,7 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
             <button
               type="button"
               onClick={() => setShowSignInModal(false)}
-              className="mt-6 text-xs font-semibold text-[#6E6A63] hover:text-[#292824] cursor-pointer"
+              className="mt-4 text-xs font-semibold text-[#6E6A63] hover:text-[#292824] cursor-pointer"
             >
               Cancel and return to homepage
             </button>

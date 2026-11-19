@@ -2,27 +2,37 @@ import React, { useMemo, useState } from 'react';
 import {
   Activity,
   ArrowLeft,
+  Check,
   Crown,
   ExternalLink,
-  LayoutGrid,
   LogOut,
+  MailPlus,
   QrCode,
   Search,
-  Settings,
   ShieldCheck,
   Sliders,
   Trash2,
+  UserPlus,
   Users,
 } from 'lucide-react';
-import { BarcodeRecord, UserProfile } from '../types/qr';
+import {
+  BarcodeRecord,
+  PlanType,
+  SuperAdminInviteRecord,
+  UserProfile,
+  UserRole,
+} from '../types/qr';
 import { PLAN_CATALOG } from '../utils/qrLogic';
 
 interface SuperAdminViewProps {
   currentUser: UserProfile;
   users: UserProfile[];
   barcodes: BarcodeRecord[];
+  invites: SuperAdminInviteRecord[];
   onOpenPlanManager: (subscriber: UserProfile) => void;
   onToggleSubscriberStatus: (subscriber: UserProfile) => Promise<void>;
+  onGrantEmailPermission: (email: string, role: UserRole, plan: PlanType) => Promise<void>;
+  onRevokeInvite: (inviteId: string) => Promise<void>;
   onToggleBarcodeActive: (barcode: BarcodeRecord) => Promise<void>;
   onHardDeleteBarcode: (shortCode: string) => Promise<void>;
   onPreviewBarcodeLanding: (shortCode: string) => void;
@@ -34,17 +44,29 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
   currentUser,
   users,
   barcodes,
+  invites,
   onOpenPlanManager,
   onToggleSubscriberStatus,
+  onGrantEmailPermission,
+  onRevokeInvite,
   onToggleBarcodeActive,
   onHardDeleteBarcode,
   onPreviewBarcodeLanding,
   onSwitchToAdminDashboard,
   onSignOut,
 }) => {
-  const [activeTab, setActiveTab] = useState<'SUBSCRIBERS' | 'BARCODES' | 'PLANS'>('SUBSCRIBERS');
+  const [activeTab, setActiveTab] = useState<'SUBSCRIBERS' | 'PERMISSIONS' | 'BARCODES' | 'PLANS'>(
+    'SUBSCRIBERS'
+  );
   const [userSearch, setUserSearch] = useState('');
   const [barcodeSearch, setBarcodeSearch] = useState('');
+
+  // Invite / Permission Grant form state
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState<UserRole>('SUPER_ADMIN');
+  const [invitePlan, setInvitePlan] = useState<PlanType>('ENTERPRISE');
+  const [inviteSuccessMsg, setInviteSuccessMsg] = useState('');
+  const [inviteErrorMsg, setInviteErrorMsg] = useState('');
 
   const totalScans = useMemo(
     () => barcodes.reduce((sum, b) => sum + b.scanCount, 0),
@@ -88,9 +110,30 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
     );
   }, [barcodes, barcodeSearch]);
 
+  const handleGrantSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setInviteErrorMsg('');
+    setInviteSuccessMsg('');
+    const cleanedEmail = inviteEmail.trim().toLowerCase();
+    if (!cleanedEmail || !cleanedEmail.includes('@')) {
+      setInviteErrorMsg('Please enter a valid Gmail or Google Workspace email address.');
+      return;
+    }
+
+    try {
+      await onGrantEmailPermission(cleanedEmail, inviteRole, invitePlan);
+      setInviteSuccessMsg(
+        `Permission granted for ${cleanedEmail} (${inviteRole} · ${invitePlan}). When they sign in with Google, they will be routed automatically.`
+      );
+      setInviteEmail('');
+    } catch (err: any) {
+      setInviteErrorMsg(err?.message || 'Failed to grant permission.');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#F8F5EF] text-[#292824] flex flex-col lg:flex-row">
-      {/* Dark Forest Green Sidebar (#233229) matching Image 2 center */}
+      {/* Dark Forest Green Sidebar (#233229) */}
       <aside className="w-full lg:w-64 bg-[#233229] text-white flex flex-col justify-between shrink-0">
         <div>
           <div className="p-6 flex items-center justify-between">
@@ -116,6 +159,19 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
             >
               <Users className="w-4 h-4 shrink-0" />
               <span>Subscribers ({users.length})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('PERMISSIONS')}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-colors cursor-pointer whitespace-nowrap ${
+                activeTab === 'PERMISSIONS'
+                  ? 'bg-[#D97745] text-white'
+                  : 'text-[#E6E0D6] hover:bg-white/10'
+              }`}
+            >
+              <UserPlus className="w-4 h-4 shrink-0" />
+              <span>Admin Invites & Access</span>
             </button>
 
             <button
@@ -153,7 +209,7 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
             className="w-full flex items-center justify-center gap-2 py-2.5 px-3 bg-white/10 hover:bg-white/15 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Subscriber Dashboard</span>
+            <span>My QR Workspace</span>
           </button>
         </div>
       </aside>
@@ -164,14 +220,14 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
           <div>
             <h1 className="text-xl font-bold text-[#292824]">Platform Overview</h1>
             <p className="text-xs text-[#6E6A63]">
-              Manage subscribers, enforce plan quotas, and moderate all dynamic QR codes
+              Manage subscribers, grant Super Admin permissions, and moderate all dynamic QR codes
             </p>
           </div>
 
           <div className="flex items-center gap-3">
             <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-[#292824]">
               <Crown className="w-4 h-4 text-[#D97745]" />
-              <span>Super Admin · {currentUser.name}</span>
+              <span>{currentUser.email}</span>
             </span>
 
             <button
@@ -194,7 +250,7 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
         </header>
 
         <main className="p-6 space-y-6 max-w-7xl w-full mx-auto">
-          {/* A. Platform Overview KPI Cards matching Image 2 center */}
+          {/* A. Platform Overview KPI Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white border border-[#E6E0D6] rounded-2xl p-5">
               <div className="w-9 h-9 rounded-xl bg-[#EFECE6] text-[#292824] flex items-center justify-center mb-3">
@@ -242,11 +298,11 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
           {/* Section Switcher Tabs */}
           <div className="bg-white border border-[#E6E0D6] rounded-2xl overflow-hidden">
             <div className="px-6 pt-4 border-b border-[#EFECE6] flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-6">
+              <div className="flex items-center gap-6 overflow-x-auto">
                 <button
                   type="button"
                   onClick={() => setActiveTab('SUBSCRIBERS')}
-                  className={`pb-3.5 text-xs font-bold border-b-2 transition-colors cursor-pointer ${
+                  className={`pb-3.5 text-xs font-bold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
                     activeTab === 'SUBSCRIBERS'
                       ? 'border-[#D97745] text-[#292824]'
                       : 'border-transparent text-[#6E6A63] hover:text-[#292824]'
@@ -256,8 +312,19 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
                 </button>
                 <button
                   type="button"
+                  onClick={() => setActiveTab('PERMISSIONS')}
+                  className={`pb-3.5 text-xs font-bold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
+                    activeTab === 'PERMISSIONS'
+                      ? 'border-[#D97745] text-[#292824]'
+                      : 'border-transparent text-[#6E6A63] hover:text-[#292824]'
+                  }`}
+                >
+                  Invite / Grant Admin Access
+                </button>
+                <button
+                  type="button"
                   onClick={() => setActiveTab('BARCODES')}
-                  className={`pb-3.5 text-xs font-bold border-b-2 transition-colors cursor-pointer ${
+                  className={`pb-3.5 text-xs font-bold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
                     activeTab === 'BARCODES'
                       ? 'border-[#D97745] text-[#292824]'
                       : 'border-transparent text-[#6E6A63] hover:text-[#292824]'
@@ -268,7 +335,7 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setActiveTab('PLANS')}
-                  className={`pb-3.5 text-xs font-bold border-b-2 transition-colors cursor-pointer ${
+                  className={`pb-3.5 text-xs font-bold border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
                     activeTab === 'PLANS'
                       ? 'border-[#D97745] text-[#292824]'
                       : 'border-transparent text-[#6E6A63] hover:text-[#292824]'
@@ -355,7 +422,7 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
                               onClick={() => onOpenPlanManager(sub)}
                               className="px-3 py-1.5 bg-[#F8F5EF] hover:bg-[#FDF2EC] text-[#292824] hover:text-[#D97745] border border-[#E6E0D6] rounded-lg text-xs font-bold transition-colors cursor-pointer"
                             >
-                              Manage Plan
+                              Manage Plan & Role
                             </button>
                             <button
                               type="button"
@@ -371,6 +438,154 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
                     })}
                   </tbody>
                 </table>
+              </div>
+            )}
+
+            {/* Admin Invites & Permission Grant Panel */}
+            {activeTab === 'PERMISSIONS' && (
+              <div className="p-6 space-y-6">
+                <div className="max-w-2xl bg-[#F8F5EF] border border-[#E6E0D6] rounded-2xl p-6">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-xl bg-[#FDF2EC] text-[#D97745] flex items-center justify-center">
+                      <MailPlus className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-base font-bold text-[#292824]">
+                        Grant Role or Invite Account by Email
+                      </h2>
+                      <p className="text-xs text-[#6E6A63]">
+                        Authorize any Google email to access Super Admin or a specific plan upon login
+                      </p>
+                    </div>
+                  </div>
+
+                  <form onSubmit={handleGrantSubmit} className="space-y-4 mt-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="sm:col-span-3">
+                        <label
+                          htmlFor="invite-email-input"
+                          className="block text-xs font-semibold text-[#292824] mb-1"
+                        >
+                          Google Account Email
+                        </label>
+                        <input
+                          id="invite-email-input"
+                          type="email"
+                          value={inviteEmail}
+                          onChange={(e) => setInviteEmail(e.target.value)}
+                          placeholder="colleague@gmail.com"
+                          className="w-full px-3.5 py-2.5 bg-white border border-[#E6E0D6] rounded-xl text-sm text-[#292824] focus:outline-none focus:border-[#D97745]"
+                        />
+                      </div>
+
+                      <div>
+                        <label
+                          htmlFor="invite-role-select"
+                          className="block text-xs font-semibold text-[#292824] mb-1"
+                        >
+                          Granted Role
+                        </label>
+                        <select
+                          id="invite-role-select"
+                          value={inviteRole}
+                          onChange={(e) => setInviteRole(e.target.value as UserRole)}
+                          className="w-full px-3 py-2.5 bg-white border border-[#E6E0D6] rounded-xl text-xs font-semibold text-[#292824]"
+                        >
+                          <option value="SUPER_ADMIN">SUPER_ADMIN (Full Platform Access)</option>
+                          <option value="ADMIN">ADMIN (Standard Subscriber)</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label
+                          htmlFor="invite-plan-select"
+                          className="block text-xs font-semibold text-[#292824] mb-1"
+                        >
+                          Assigned Plan
+                        </label>
+                        <select
+                          id="invite-plan-select"
+                          value={invitePlan}
+                          onChange={(e) => setInvitePlan(e.target.value as PlanType)}
+                          className="w-full px-3 py-2.5 bg-white border border-[#E6E0D6] rounded-xl text-xs font-semibold text-[#292824]"
+                        >
+                          <option value="ENTERPRISE">ENTERPRISE</option>
+                          <option value="PRO">PRO</option>
+                          <option value="FREE">FREE</option>
+                        </select>
+                      </div>
+
+                      <div className="flex items-end">
+                        <button
+                          type="submit"
+                          className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 bg-[#D97745] hover:bg-[#c56737] text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                        >
+                          <Check className="w-4 h-4" />
+                          <span>Grant Permission</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {inviteSuccessMsg && (
+                      <div className="p-3 bg-[#DCE9DD] text-[#2E6B3E] rounded-xl text-xs font-semibold">
+                        {inviteSuccessMsg}
+                      </div>
+                    )}
+
+                    {inviteErrorMsg && (
+                      <div className="p-3 bg-red-50 text-red-700 border border-red-200 rounded-xl text-xs font-semibold">
+                        {inviteErrorMsg}
+                      </div>
+                    )}
+                  </form>
+                </div>
+
+                {/* Pending / Active Invitations List */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-bold text-[#292824]">
+                    Pre-Authorized Email Permissions ({invites.length})
+                  </h3>
+                  {invites.length === 0 ? (
+                    <p className="text-xs text-[#6E6A63]">
+                      No pending email invitations. The primary database owner (
+                      <span className="font-mono font-semibold">ah2005211@gmail.com</span>) is
+                      permanently authorized as Super Admin.
+                    </p>
+                  ) : (
+                    <div className="overflow-x-auto border border-[#E6E0D6] rounded-xl">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="border-b border-[#EFECE6] text-[11px] font-semibold text-[#6E6A63] bg-[#F8F5EF]">
+                            <th className="py-2.5 px-4">Authorized Email</th>
+                            <th className="py-2.5 px-4">Role</th>
+                            <th className="py-2.5 px-4">Plan</th>
+                            <th className="py-2.5 px-4">Invited By</th>
+                            <th className="py-2.5 px-4 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#EFECE6] text-xs">
+                          {invites.map((inv) => (
+                            <tr key={inv.id}>
+                              <td className="py-2.5 px-4 font-bold text-[#292824]">{inv.email}</td>
+                              <td className="py-2.5 px-4 font-bold text-[#D97745]">{inv.role}</td>
+                              <td className="py-2.5 px-4">{inv.plan}</td>
+                              <td className="py-2.5 px-4 text-[#6E6A63]">{inv.invitedBy}</td>
+                              <td className="py-2.5 px-4 text-right">
+                                <button
+                                  type="button"
+                                  onClick={() => onRevokeInvite(inv.id)}
+                                  className="text-red-600 hover:underline font-semibold cursor-pointer"
+                                >
+                                  Revoke
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 

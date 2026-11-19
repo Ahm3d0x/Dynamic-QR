@@ -34,6 +34,7 @@ interface PublicHomeViewProps {
   onGoogleLogin: () => Promise<void>;
   onOpenScanner: () => void;
   onResolveShortCode: (shortCode: string) => void;
+  onOpenLegalPage?: (page: 'PRIVACY' | 'TERMS') => void;
 }
 
 const SHOWCASE_TYPES: {
@@ -108,6 +109,7 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
   onGoogleLogin,
   onOpenScanner,
   onResolveShortCode,
+  onOpenLegalPage,
 }) => {
   const [shortIdSearch, setShortIdSearch] = useState('');
   const [showSignInModal, setShowSignInModal] = useState(false);
@@ -616,7 +618,33 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
               <strong className="text-[#D97745]">QR</strong> — Smart Link &amp; QR Code Management
             </span>
           </span>
-          <span>Simple. Powerful. Dynamic.</span>
+          <div className="flex items-center gap-4">
+            <a
+              href="/privacy"
+              onClick={(e) => {
+                if (onOpenLegalPage) {
+                  e.preventDefault();
+                  onOpenLegalPage('PRIVACY');
+                }
+              }}
+              className="hover:text-[#292824] transition-colors"
+            >
+              Privacy Policy
+            </a>
+            <span>·</span>
+            <a
+              href="/terms"
+              onClick={(e) => {
+                if (onOpenLegalPage) {
+                  e.preventDefault();
+                  onOpenLegalPage('TERMS');
+                }
+              }}
+              className="hover:text-[#292824] transition-colors"
+            >
+              Terms of Service
+            </a>
+          </div>
         </div>
       </footer>
 

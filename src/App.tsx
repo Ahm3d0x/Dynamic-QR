@@ -65,8 +65,9 @@ import { ScannerModal } from './components/ScannerModal';
 import { PlanManagerModal } from './components/PlanManagerModal';
 import { EditPlanModal } from './components/EditPlanModal';
 import { OfflineIndicator } from './components/OfflineIndicator';
+import { LegalPagesView } from './components/LegalPagesView';
 
-type ViewMode = 'HOME' | 'ADMIN' | 'SUPER_ADMIN' | 'REDIRECT';
+type ViewMode = 'HOME' | 'ADMIN' | 'SUPER_ADMIN' | 'REDIRECT' | 'PRIVACY' | 'TERMS';
 
 const PRIMARY_SUPER_ADMIN_EMAIL = 'ah2005211@gmail.com';
 const SESSION_PROFILE_KEY = 'dynamicqr_session_profile_v1';
@@ -196,8 +197,16 @@ function getInitialRoute(): { viewMode: ViewMode; shortCode: string } {
   if (typeof window === 'undefined') {
     return { viewMode: 'HOME', shortCode: '' };
   }
-  const path = window.location.pathname;
+  const path = window.location.pathname.replace(/\/+$/, '') || '/';
   const params = new URLSearchParams(window.location.search);
+
+  if (path === '/privacy' || path === '/privacy-policy') {
+    return { viewMode: 'PRIVACY', shortCode: '' };
+  }
+  if (path === '/terms' || path === '/terms-of-service') {
+    return { viewMode: 'TERMS', shortCode: '' };
+  }
+
   const rMatch = path.match(/^\/r\/([A-Za-z0-9_-]+)/);
 
   if (rMatch && rMatch[1]) {
@@ -318,8 +327,12 @@ export default function App() {
     const handleRouteSync = () => {
       const next = getInitialRoute();
       setActiveShortCode(next.shortCode);
-      if (next.viewMode === 'REDIRECT') {
-        setViewMode('REDIRECT');
+      if (
+        next.viewMode === 'REDIRECT' ||
+        next.viewMode === 'PRIVACY' ||
+        next.viewMode === 'TERMS'
+      ) {
+        setViewMode(next.viewMode);
       } else if (auth.currentUser) {
         const cached = readCachedProfile();
         const savedView = readLastWorkspaceView();
@@ -481,7 +494,11 @@ export default function App() {
         setIsCompletingRedirect(false);
         clearCachedSession();
         setFirebaseUid(null);
-        if (viewModeRef.current !== 'REDIRECT') {
+        if (
+          viewModeRef.current !== 'REDIRECT' &&
+          viewModeRef.current !== 'PRIVACY' &&
+          viewModeRef.current !== 'TERMS'
+        ) {
           setViewMode('HOME');
         }
       }
@@ -494,7 +511,11 @@ export default function App() {
       } else if (authInitialized) {
         clearCachedSession();
         setFirebaseUid(null);
-        if (viewModeRef.current !== 'REDIRECT') {
+        if (
+          viewModeRef.current !== 'REDIRECT' &&
+          viewModeRef.current !== 'PRIVACY' &&
+          viewModeRef.current !== 'TERMS'
+        ) {
           setViewMode('HOME');
         }
       }
@@ -1179,6 +1200,16 @@ export default function App() {
     );
   }
 
+  const navigateToLegalPage = (page: 'PRIVACY' | 'TERMS') => {
+    setViewMode(page);
+    try {
+      window.history.pushState({}, '', page === 'PRIVACY' ? '/privacy' : '/terms');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch {
+      // Ignore history pushState restriction
+    }
+  };
+
   return (
     <ErrorBoundary>
       {viewMode === 'HOME' && (
@@ -1189,6 +1220,15 @@ export default function App() {
           onGoogleLogin={handleGoogleLogin}
           onOpenScanner={() => setScannerOpen(true)}
           onResolveShortCode={navigateToRedirect}
+          onOpenLegalPage={navigateToLegalPage}
+        />
+      )}
+
+      {(viewMode === 'PRIVACY' || viewMode === 'TERMS') && (
+        <LegalPagesView
+          page={viewMode}
+          onBackHome={exitRedirectToWorkspace}
+          onSwitchPage={navigateToLegalPage}
         />
       )}
 

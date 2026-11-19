@@ -29,6 +29,14 @@
   ],
   "rewrites": [
     {
+      "source": "/__/auth/:path*",
+      "destination": "https://gen-lang-client-0215858715.firebaseapp.com/__/auth/:path*"
+    },
+    {
+      "source": "/__/firebase/init.json",
+      "destination": "https://gen-lang-client-0215858715.firebaseapp.com/__/firebase/init.json"
+    },
+    {
       "source": "/r/:shortCode*",
       "destination": "/index.html"
     },

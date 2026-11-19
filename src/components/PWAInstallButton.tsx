@@ -5,11 +5,13 @@ import { usePWAInstall } from '../hooks/usePWAInstall';
 interface PWAInstallButtonProps {
   variant?: 'hero' | 'sidebar' | 'compact' | 'card';
   showFallbackGuide?: boolean;
+  className?: string;
 }
 
 export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
   variant = 'compact',
   showFallbackGuide = false,
+  className = '',
 }) => {
   const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
   const [showGuideModal, setShowGuideModal] = useState(false);
@@ -44,9 +46,9 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
         <button
           type="button"
           onClick={handleClick}
-          className="inline-flex items-center justify-center gap-2 px-5 py-3.5 min-h-[48px] bg-white hover:bg-[#FDF2EC] text-[#292824] hover:text-[#D97745] border border-[#E6E0D6] text-sm font-bold rounded-2xl transition-colors cursor-pointer whitespace-nowrap"
+          className={`inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-3.5 min-h-[48px] bg-white hover:bg-[#FDF2EC] text-[#292824] hover:text-[#D97745] border border-[#E6E0D6] text-xs sm:text-sm font-bold rounded-2xl transition-colors cursor-pointer whitespace-nowrap ${className}`}
         >
-          <Download className="w-4 h-4 text-[#D97745]" />
+          <Download className="w-4 h-4 text-[#D97745] shrink-0" />
           <span>{buttonLabel}</span>
         </button>
       )}

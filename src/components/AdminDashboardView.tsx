@@ -6,6 +6,7 @@ import {
   Camera,
   Check,
   CheckCircle2,
+  ChevronRight,
   Copy,
   Crown,
   Edit3,
@@ -13,6 +14,7 @@ import {
   History,
   LayoutDashboard,
   LogOut,
+  Menu,
   Plus,
   Printer,
   QrCode,
@@ -39,6 +41,7 @@ import {
 } from '../utils/qrLogic';
 import { BrandLogo } from './BrandLogo';
 import { PWAInstallButton } from './PWAInstallButton';
+import { MobileMenuSheet } from './MobileMenuSheet';
 
 interface AdminDashboardViewProps {
   user: UserProfile;
@@ -97,6 +100,14 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     null
   );
   const [copiedUpgradeRequest, setCopiedUpgradeRequest] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const handleMobileNavSelect = (
+    target: 'DASHBOARD' | 'CODES' | 'LOGS' | 'PLANS' | 'SETTINGS'
+  ) => {
+    setActiveNav(target);
+    setMobileMenuOpen(false);
+  };
 
   const visiblePlans = useMemo(
     () =>
@@ -283,53 +294,27 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
       {/* Main Workspace Area */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Compact Mobile Top App Bar (56px, Single Sticky Top Bar) */}
-        <header className="lg:hidden sticky top-0 z-30 h-14 px-3.5 bg-[#233229] text-white border-b border-white/10 flex items-center justify-between gap-2">
+        {/* Clean Calm Mobile Top App Bar (56px) */}
+        <header className="lg:hidden sticky top-0 z-30 h-14 px-4 bg-[#233229] text-white border-b border-white/10 flex items-center justify-between gap-2">
           <BrandLogo size="sm" theme="dark" />
 
-          <div className="flex items-center gap-1.5">
-            <PWAInstallButton variant="compact" />
-
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={onOpenScanner}
               aria-label="Open QR Scanner"
-              className="min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/15 text-white cursor-pointer"
+              className="min-w-[42px] min-h-[42px] flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/15 active:scale-95 text-white transition-transform cursor-pointer"
             >
               <Camera className="w-4 h-4 text-[#D97745]" />
             </button>
 
             <button
               type="button"
-              onClick={() => setActiveNav('SETTINGS')}
-              aria-label="Open Settings"
-              className={`min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl cursor-pointer transition-colors ${
-                activeNav === 'SETTINGS'
-                  ? 'bg-[#D97745] text-white'
-                  : 'bg-white/10 hover:bg-white/15 text-white'
-              }`}
+              onClick={() => setMobileMenuOpen(true)}
+              aria-label="Open mobile menu"
+              className="min-w-[42px] min-h-[42px] flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/15 active:scale-95 text-white transition-transform cursor-pointer"
             >
-              <Settings className="w-4 h-4" />
-            </button>
-
-            {user.role === 'SUPER_ADMIN' && onSwitchToSuperAdmin && (
-              <button
-                type="button"
-                onClick={onSwitchToSuperAdmin}
-                aria-label="Open Platform Console"
-                className="min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl bg-[#D97745]/25 text-[#D97745] border border-[#D97745]/40 cursor-pointer"
-              >
-                <Shield className="w-4 h-4" />
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={onSignOut}
-              aria-label="Sign out"
-              className="min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/15 text-[#E6E0D6] cursor-pointer"
-            >
-              <LogOut className="w-4 h-4" />
+              <Menu className="w-5 h-5" />
             </button>
           </div>
         </header>
@@ -456,15 +441,17 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           {activeNav === 'DASHBOARD' && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               {/* Scan Statistics SVG Area Chart */}
-              <div className="lg:col-span-8 bg-white border border-[#E6E0D6] rounded-2xl p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
+              <div className="lg:col-span-8 bg-white border border-[#E6E0D6] rounded-2xl p-4 sm:p-6">
+                <div className="flex flex-wrap items-start justify-between gap-2 mb-4">
+                  <div className="min-w-0">
                     <h2 className="text-base font-bold text-[#292824]">Scan Statistics</h2>
                     <p className="text-xs text-[#6E6A63]">
                       Monthly dynamic redirection volume across your active campaigns
                     </p>
                   </div>
-                  <span className="text-xs font-semibold text-[#6E6A63]">Last 6 Months</span>
+                  <span className="text-[11px] font-semibold text-[#6E6A63] bg-[#F8F5EF] border border-[#E6E0D6] px-2.5 py-1 rounded-lg whitespace-nowrap shrink-0">
+                    Last 6 Months
+                  </span>
                 </div>
 
                 <div className="h-44 w-full pt-4">
@@ -590,8 +577,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                 </div>
 
                 {/* Search & Content Type Filter Bar */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="relative">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full md:w-auto">
+                  <div className="relative w-full sm:w-56">
                     <Search className="w-3.5 h-3.5 text-[#6E6A63] absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
@@ -599,36 +586,38 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Search title or Short ID..."
-                      className="pl-8 pr-3 py-2 bg-white border border-[#E6E0D6] rounded-xl text-xs text-[#292824] focus:outline-none focus:border-[#D97745]"
+                      className="w-full min-h-[42px] pl-8 pr-3 py-2 bg-white border border-[#E6E0D6] rounded-xl text-xs text-[#292824] focus:outline-none focus:border-[#D97745]"
                     />
                   </div>
 
-                  <select
-                    aria-label="Filter by content type"
-                    value={typeFilter}
-                    onChange={(e) => setTypeFilter(e.target.value as 'ALL' | ContentType)}
-                    className="px-3 py-2 bg-white border border-[#E6E0D6] rounded-xl text-xs font-semibold text-[#292824]"
-                  >
-                    <option value="ALL">All Types (6)</option>
-                    <option value="URL">URL</option>
-                    <option value="TEXT">TEXT</option>
-                    <option value="IMAGE">IMAGE</option>
-                    <option value="VCARD">VCARD</option>
-                    <option value="WIFI">WIFI</option>
-                    <option value="GEO_EVENT">GEO_EVENT</option>
-                  </select>
+                  <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
+                    <select
+                      aria-label="Filter by content type"
+                      value={typeFilter}
+                      onChange={(e) => setTypeFilter(e.target.value as 'ALL' | ContentType)}
+                      className="w-full sm:w-auto min-h-[42px] px-3 py-2 bg-white border border-[#E6E0D6] rounded-xl text-xs font-semibold text-[#292824]"
+                    >
+                      <option value="ALL">All Types (6)</option>
+                      <option value="URL">URL</option>
+                      <option value="TEXT">TEXT</option>
+                      <option value="IMAGE">IMAGE</option>
+                      <option value="VCARD">VCARD</option>
+                      <option value="WIFI">WIFI</option>
+                      <option value="GEO_EVENT">GEO_EVENT</option>
+                    </select>
 
-                  <button
-                    type="button"
-                    onClick={() => setShowDeleted(!showDeleted)}
-                    className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-colors cursor-pointer ${
-                      showDeleted
-                        ? 'bg-[#233229] text-white border-[#233229]'
-                        : 'bg-white text-[#6E6A63] border-[#E6E0D6] hover:text-[#292824]'
-                    }`}
-                  >
-                    Trash ({deletedUserBarcodes.length})
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowDeleted(!showDeleted)}
+                      className={`w-full sm:w-auto min-h-[42px] px-3 py-2 rounded-xl text-xs font-semibold border transition-colors cursor-pointer whitespace-nowrap ${
+                        showDeleted
+                          ? 'bg-[#233229] text-white border-[#233229]'
+                          : 'bg-white text-[#6E6A63] border-[#E6E0D6] hover:text-[#292824]'
+                      }`}
+                    >
+                      Trash ({deletedUserBarcodes.length})
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -719,7 +708,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                         </div>
 
                         {/* Action Bar */}
-                        <div className="pt-3 border-t border-[#EFECE6] flex items-center justify-between gap-2">
+                        <div className="pt-3 border-t border-[#EFECE6] flex flex-wrap items-center justify-between gap-2">
                           {!bc.isDeleted ? (
                             <>
                               <div className="flex items-center gap-1.5">
@@ -727,7 +716,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                                   type="button"
                                   onClick={() => onOpenEditModal(bc)}
                                   aria-label={`Edit ${bc.title}`}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-[#F8F5EF] hover:bg-[#FDF2EC] text-[#292824] hover:text-[#D97745] border border-[#E6E0D6] rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                                  className="min-h-[36px] inline-flex items-center gap-1 px-2.5 py-1.5 bg-[#F8F5EF] hover:bg-[#FDF2EC] text-[#292824] hover:text-[#D97745] border border-[#E6E0D6] rounded-lg text-xs font-semibold transition-colors cursor-pointer"
                                 >
                                   <Edit3 className="w-3.5 h-3.5" />
                                   <span>Edit</span>
@@ -737,7 +726,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                                   type="button"
                                   onClick={() => onOpenPrintModal(bc)}
                                   aria-label={`Print ${bc.title}`}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-[#F8F5EF] hover:bg-[#FDF2EC] text-[#292824] hover:text-[#D97745] border border-[#E6E0D6] rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                                  className="min-h-[36px] inline-flex items-center gap-1 px-2.5 py-1.5 bg-[#F8F5EF] hover:bg-[#FDF2EC] text-[#292824] hover:text-[#D97745] border border-[#E6E0D6] rounded-lg text-xs font-semibold transition-colors cursor-pointer"
                                 >
                                   <Printer className="w-3.5 h-3.5" />
                                   <span>Print</span>
@@ -747,14 +736,14 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                                   type="button"
                                   onClick={() => onSimulateScan(bc.shortCode)}
                                   aria-label={`Test scan ${bc.title}`}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-[#F8F5EF] hover:bg-[#FDF2EC] text-[#D97745] border border-[#E6E0D6] rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                                  className="min-h-[36px] inline-flex items-center gap-1 px-2.5 py-1.5 bg-[#F8F5EF] hover:bg-[#FDF2EC] text-[#D97745] border border-[#E6E0D6] rounded-lg text-xs font-semibold transition-colors cursor-pointer"
                                 >
                                   <ExternalLink className="w-3.5 h-3.5" />
                                   <span>Scan</span>
                                 </button>
                               </div>
 
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 shrink-0">
                                 <button
                                   type="button"
                                   role="switch"
@@ -804,21 +793,51 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           {/* Scan Logs Tab */}
           {activeNav === 'LOGS' && (
             <section className="bg-white border border-[#E6E0D6] rounded-2xl overflow-hidden">
-              <div className="p-5 border-b border-[#EFECE6] flex items-center justify-between">
-                <div>
+              <div className="p-4 sm:p-5 border-b border-[#EFECE6] flex flex-wrap items-start justify-between gap-2">
+                <div className="min-w-0">
                   <h2 className="text-base font-bold text-[#292824]">
                     Atomic Scan Activity Logs
                   </h2>
-                  <p className="text-xs text-[#6E6A63]">
+                  <p className="text-xs text-[#6E6A63] mt-0.5">
                     Isolated scanLog records prevent Firestore document contention on high-traffic QRs
                   </p>
                 </div>
-                <span className="text-xs font-mono text-[#6E6A63] tabular-nums">
-                  {scanLogs.length} recent events
+                <span className="text-[11px] font-mono font-semibold text-[#6E6A63] bg-[#F8F5EF] border border-[#E6E0D6] px-2.5 py-1 rounded-lg tabular-nums whitespace-nowrap shrink-0">
+                  {scanLogs.length} events
                 </span>
               </div>
 
-              <div className="overflow-x-auto">
+              {/* Mobile Card List */}
+              <div className="md:hidden divide-y divide-[#EFECE6]">
+                {scanLogs.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-[#6E6A63]">
+                    No scan activity logged yet.
+                  </div>
+                ) : (
+                  scanLogs.map((log) => (
+                    <div key={log.id} className="p-4 space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-mono font-bold text-[#D97745]">
+                          {log.barcodeId}
+                        </span>
+                        <span className="text-[11px] font-mono text-[#6E6A63] tabular-nums whitespace-nowrap">
+                          {typeof log.timestamp === 'string'
+                            ? new Date(log.timestamp).toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })
+                            : 'Just now'}
+                        </span>
+                      </div>
+                      <div className="text-sm font-bold text-[#292824] truncate">{log.title}</div>
+                      <div className="text-xs text-[#6E6A63] truncate">{log.deviceInfo}</div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Desktop Table */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-[#EFECE6] text-[11px] font-semibold text-[#6E6A63] bg-[#F8F5EF]">
@@ -856,14 +875,14 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           {activeNav === 'PLANS' && (
             <section className="space-y-6">
               {/* Current Plan Overview & Billing Cycle Switcher */}
-              <div className="bg-white border border-[#E6E0D6] rounded-2xl p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+              <div className="bg-white border border-[#E6E0D6] rounded-2xl p-5 sm:p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
                 <div className="space-y-2 max-w-xl">
                   <div className="flex items-center gap-2 text-xs font-bold text-[#D97745]">
-                    <Crown className="w-4 h-4" />
+                    <Crown className="w-4 h-4 shrink-0" />
                     <span>Your Active Subscription · {currentPlanConfig?.label || user.plan}</span>
                   </div>
-                  <h2 className="text-xl font-bold text-[#292824]">
-                    Subscription Plans & Quota Details
+                  <h2 className="text-lg sm:text-xl font-bold text-[#292824]">
+                    Subscription Plans &amp; Quota Details
                   </h2>
                   <p className="text-xs text-[#6E6A63] leading-relaxed">
                     Compare available plans, scan limits, auto-routing timers, and white-label
@@ -871,13 +890,13 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                   </p>
                 </div>
 
-                {/* Monthly / Yearly Toggle */}
+                {/* Monthly / Yearly Toggle + Clean Usage Summary */}
                 <div className="flex flex-col sm:items-end gap-3 shrink-0">
-                  <div className="inline-flex items-center p-1 bg-[#F8F5EF] border border-[#E6E0D6] rounded-xl">
+                  <div className="grid grid-cols-2 sm:inline-flex items-center p-1 bg-[#F8F5EF] border border-[#E6E0D6] rounded-xl w-full sm:w-auto">
                     <button
                       type="button"
                       onClick={() => setBillingCycle('MONTHLY')}
-                      className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                      className={`min-h-[38px] px-4 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
                         billingCycle === 'MONTHLY'
                           ? 'bg-[#233229] text-white'
                           : 'text-[#6E6A63] hover:text-[#292824]'
@@ -888,7 +907,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                     <button
                       type="button"
                       onClick={() => setBillingCycle('YEARLY')}
-                      className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                      className={`min-h-[38px] px-4 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
                         billingCycle === 'YEARLY'
                           ? 'bg-[#233229] text-white'
                           : 'text-[#6E6A63] hover:text-[#292824]'
@@ -898,21 +917,26 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                     </button>
                   </div>
 
-                  <div className="text-xs text-[#6E6A63] font-mono tabular-nums">
-                    Active usage:{' '}
-                    <strong className="text-[#292824]">
-                      {activeUserBarcodes.length}/{user.maxBarcodes}
-                    </strong>{' '}
-                    codes ·{' '}
-                    <strong className="text-[#292824]">
-                      {user.maxScansPerBarcode.toLocaleString()}
-                    </strong>{' '}
-                    scans/code ·{' '}
-                    <strong className="text-[#292824]">
-                      {user.allowDirectRedirect
-                        ? 'Custom auto-route (0–30s)'
-                        : `Fixed ${user.defaultRedirectDelaySeconds ?? 5}s auto-route`}
-                    </strong>
+                  <div className="flex flex-wrap sm:justify-end gap-1.5 text-[11px] font-mono tabular-nums text-[#6E6A63]">
+                    <span className="px-2.5 py-1 rounded-lg bg-[#F8F5EF] border border-[#E6E0D6]">
+                      <strong className="text-[#292824]">
+                        {activeUserBarcodes.length}/{user.maxBarcodes}
+                      </strong>{' '}
+                      codes
+                    </span>
+                    <span className="px-2.5 py-1 rounded-lg bg-[#F8F5EF] border border-[#E6E0D6]">
+                      <strong className="text-[#292824]">
+                        {user.maxScansPerBarcode.toLocaleString()}
+                      </strong>{' '}
+                      scans/code
+                    </span>
+                    <span className="px-2.5 py-1 rounded-lg bg-[#F8F5EF] border border-[#E6E0D6]">
+                      <strong className="text-[#292824]">
+                        {user.allowDirectRedirect
+                          ? '0–30s auto-route'
+                          : `Fixed ${user.defaultRedirectDelaySeconds ?? 5}s`}
+                      </strong>
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1274,31 +1298,49 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
         </main>
       </div>
 
-      {/* Mobile Fixed Bottom Thumb Navigation Bar (64px + safe-area) */}
+      {/* Modern Mobile Bottom Dock (64px + safe-area) */}
       <nav
         aria-label="Mobile workspace navigation"
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#E6E0D6] pb-safe"
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#E6E0D6] shadow-[0_-4px_20px_rgba(35,50,41,0.06)] pb-safe"
       >
-        <div className="grid grid-cols-5 items-center h-16 px-1">
+        <div className="grid grid-cols-5 items-center h-16 px-1.5">
           <button
             type="button"
             onClick={() => setActiveNav('DASHBOARD')}
-            className={`flex flex-col items-center justify-center min-h-[48px] gap-1 text-[10px] font-bold transition-colors cursor-pointer ${
+            className={`relative flex flex-col items-center justify-center min-h-[52px] gap-1 text-[10px] font-bold transition-colors cursor-pointer ${
               activeNav === 'DASHBOARD' ? 'text-[#D97745]' : 'text-[#6E6A63]'
             }`}
           >
-            <LayoutDashboard className="w-5 h-5" />
+            {activeNav === 'DASHBOARD' && (
+              <span className="absolute top-0 w-7 h-0.5 rounded-full bg-[#D97745]" />
+            )}
+            <span
+              className={`w-9 h-7 rounded-xl flex items-center justify-center transition-colors ${
+                activeNav === 'DASHBOARD' ? 'bg-[#FDF2EC]' : ''
+              }`}
+            >
+              <LayoutDashboard className="w-[18px] h-[18px]" />
+            </span>
             <span>Home</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveNav('CODES')}
-            className={`flex flex-col items-center justify-center min-h-[48px] gap-1 text-[10px] font-bold transition-colors cursor-pointer ${
+            className={`relative flex flex-col items-center justify-center min-h-[52px] gap-1 text-[10px] font-bold transition-colors cursor-pointer ${
               activeNav === 'CODES' ? 'text-[#D97745]' : 'text-[#6E6A63]'
             }`}
           >
-            <QrCode className="w-5 h-5" />
+            {activeNav === 'CODES' && (
+              <span className="absolute top-0 w-7 h-0.5 rounded-full bg-[#D97745]" />
+            )}
+            <span
+              className={`w-9 h-7 rounded-xl flex items-center justify-center transition-colors ${
+                activeNav === 'CODES' ? 'bg-[#FDF2EC]' : ''
+              }`}
+            >
+              <QrCode className="w-[18px] h-[18px]" />
+            </span>
             <span>Codes</span>
           </button>
 
@@ -1308,7 +1350,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               onClick={onOpenCreateModal}
               disabled={!quotaCheck.allowed}
               aria-label="Create New Dynamic QR"
-              className="w-12 h-12 rounded-2xl bg-[#D97745] hover:bg-[#c56737] active:scale-95 text-white flex items-center justify-center shadow-md shadow-[#D97745]/25 transition-transform cursor-pointer disabled:opacity-40"
+              className="w-13 h-13 -mt-5 rounded-2xl bg-[#D97745] hover:bg-[#c56737] active:scale-95 text-white flex items-center justify-center shadow-lg shadow-[#D97745]/30 border-4 border-[#F8F5EF] transition-transform cursor-pointer disabled:opacity-40"
             >
               <Plus className="w-6 h-6" />
             </button>
@@ -1316,27 +1358,240 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
           <button
             type="button"
-            onClick={() => setActiveNav('LOGS')}
-            className={`flex flex-col items-center justify-center min-h-[48px] gap-1 text-[10px] font-bold transition-colors cursor-pointer ${
-              activeNav === 'LOGS' ? 'text-[#D97745]' : 'text-[#6E6A63]'
+            onClick={() => setActiveNav('PLANS')}
+            className={`relative flex flex-col items-center justify-center min-h-[52px] gap-1 text-[10px] font-bold transition-colors cursor-pointer ${
+              activeNav === 'PLANS' ? 'text-[#D97745]' : 'text-[#6E6A63]'
             }`}
           >
-            <History className="w-5 h-5" />
-            <span>Logs</span>
+            {activeNav === 'PLANS' && (
+              <span className="absolute top-0 w-7 h-0.5 rounded-full bg-[#D97745]" />
+            )}
+            <span
+              className={`w-9 h-7 rounded-xl flex items-center justify-center transition-colors ${
+                activeNav === 'PLANS' ? 'bg-[#FDF2EC]' : ''
+              }`}
+            >
+              <Crown className="w-[18px] h-[18px]" />
+            </span>
+            <span>Plans</span>
           </button>
 
           <button
             type="button"
-            onClick={() => setActiveNav('PLANS')}
-            className={`flex flex-col items-center justify-center min-h-[48px] gap-1 text-[10px] font-bold transition-colors cursor-pointer ${
-              activeNav === 'PLANS' ? 'text-[#D97745]' : 'text-[#6E6A63]'
+            onClick={() => setMobileMenuOpen(true)}
+            className={`relative flex flex-col items-center justify-center min-h-[52px] gap-1 text-[10px] font-bold transition-colors cursor-pointer ${
+              mobileMenuOpen || activeNav === 'LOGS' || activeNav === 'SETTINGS'
+                ? 'text-[#D97745]'
+                : 'text-[#6E6A63]'
             }`}
           >
-            <Crown className="w-5 h-5" />
-            <span>Plans</span>
+            {(mobileMenuOpen || activeNav === 'LOGS' || activeNav === 'SETTINGS') && (
+              <span className="absolute top-0 w-7 h-0.5 rounded-full bg-[#D97745]" />
+            )}
+            <span
+              className={`w-9 h-7 rounded-xl flex items-center justify-center transition-colors ${
+                mobileMenuOpen || activeNav === 'LOGS' || activeNav === 'SETTINGS'
+                  ? 'bg-[#FDF2EC]'
+                  : ''
+              }`}
+            >
+              <Menu className="w-[18px] h-[18px]" />
+            </span>
+            <span>Menu</span>
           </button>
         </div>
       </nav>
+
+      {/* Modern Slide-Up Admin Mobile Menu Sheet */}
+      <MobileMenuSheet
+        isOpen={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
+        headerSlot={<BrandLogo size="sm" theme="light" />}
+      >
+        {/* User Profile & Plan Quota Card */}
+        <button
+          type="button"
+          onClick={() => handleMobileNavSelect('PLANS')}
+          className="w-full text-left bg-[#233229] text-white rounded-2xl p-4 space-y-3 active:scale-[0.99] transition-transform cursor-pointer"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-11 h-11 rounded-2xl bg-[#D97745] text-white font-bold text-base flex items-center justify-center shrink-0">
+                {(user.name || 'U').charAt(0).toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <div className="text-sm font-bold truncate">{user.name}</div>
+                <div className="text-[11px] text-[#E6E0D6]/80 truncate">{user.email}</div>
+              </div>
+            </div>
+            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#D97745] shrink-0">
+              <Crown className="w-3.5 h-3.5" />
+              <span>{user.plan}</span>
+            </span>
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-[11px] text-[#E6E0D6]">
+              <span>{currentPlanConfig?.label || `${user.plan} Plan`} Quota</span>
+              <span className="font-mono tabular-nums font-bold text-white">
+                {activeUserBarcodes.length} / {user.maxBarcodes} codes
+              </span>
+            </div>
+            <div className="w-full h-1.5 bg-white/15 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-[#D97745] rounded-full"
+                style={{
+                  width: `${Math.min(
+                    100,
+                    Math.round((activeUserBarcodes.length / Math.max(1, user.maxBarcodes)) * 100)
+                  )}%`,
+                }}
+              />
+            </div>
+          </div>
+        </button>
+
+        {/* 2x2 Tactile Quick Actions Grid */}
+        <div className="grid grid-cols-2 gap-2.5">
+          <button
+            type="button"
+            disabled={!quotaCheck.allowed}
+            onClick={() => {
+              setMobileMenuOpen(false);
+              onOpenCreateModal();
+            }}
+            className="p-3.5 bg-[#D97745] hover:bg-[#c56737] text-white rounded-2xl text-left space-y-1.5 active:scale-[0.98] transition-transform cursor-pointer disabled:opacity-40"
+          >
+            <Plus className="w-5 h-5" />
+            <div className="text-xs font-bold">Create New QR</div>
+            <div className="text-[11px] text-white/80">6 dynamic types</div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setMobileMenuOpen(false);
+              onOpenScanner();
+            }}
+            className="p-3.5 bg-white border border-[#E6E0D6] hover:border-[#D97745] text-[#292824] rounded-2xl text-left space-y-1.5 active:scale-[0.98] transition-transform cursor-pointer"
+          >
+            <Camera className="w-5 h-5 text-[#D97745]" />
+            <div className="text-xs font-bold">QR Scanner</div>
+            <div className="text-[11px] text-[#6E6A63]">Camera or upload</div>
+          </button>
+        </div>
+
+        {/* Workspace Navigation Rows */}
+        <div className="bg-white border border-[#E6E0D6] rounded-2xl divide-y divide-[#EFECE6] overflow-hidden">
+          {[
+            {
+              key: 'DASHBOARD' as const,
+              label: 'Dashboard Overview',
+              meta: 'Analytics & quick tools',
+              icon: LayoutDashboard,
+            },
+            {
+              key: 'CODES' as const,
+              label: 'My Dynamic QR Codes',
+              meta: `${activeUserBarcodes.length} active`,
+              icon: QrCode,
+            },
+            {
+              key: 'LOGS' as const,
+              label: 'Scan Activity Logs',
+              meta: `${totalScans.toLocaleString()} scans`,
+              icon: History,
+            },
+            {
+              key: 'PLANS' as const,
+              label: 'Plans & Pricing',
+              meta: currentPlanConfig?.label || user.plan,
+              icon: Crown,
+            },
+            {
+              key: 'SETTINGS' as const,
+              label: 'Account Settings',
+              meta: 'Profile & app options',
+              icon: Settings,
+            },
+          ].map((item) => {
+            const Icon = item.icon;
+            const isActive = activeNav === item.key;
+            return (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => handleMobileNavSelect(item.key)}
+                className={`w-full min-h-[58px] px-4 py-3 flex items-center justify-between gap-3 text-left transition-colors cursor-pointer ${
+                  isActive ? 'bg-[#FDF2EC]' : 'hover:bg-[#F8F5EF]'
+                }`}
+              >
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <div
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                      isActive ? 'bg-[#D97745] text-white' : 'bg-[#F8F5EF] text-[#292824]'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div
+                      className={`text-sm font-bold truncate ${
+                        isActive ? 'text-[#D97745]' : 'text-[#292824]'
+                      }`}
+                    >
+                      {item.label}
+                    </div>
+                    <div className="text-[11px] text-[#6E6A63] truncate">{item.meta}</div>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[#A49E93] shrink-0" />
+              </button>
+            );
+          })}
+
+          {user.role === 'SUPER_ADMIN' && onSwitchToSuperAdmin && (
+            <button
+              type="button"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                onSwitchToSuperAdmin();
+              }}
+              className="w-full min-h-[58px] px-4 py-3 flex items-center justify-between gap-3 text-left bg-[#233229]/5 hover:bg-[#FDF2EC] transition-colors cursor-pointer"
+            >
+              <div className="flex items-center gap-3.5 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-[#233229] text-[#D97745] flex items-center justify-center shrink-0">
+                  <Shield className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm font-bold text-[#292824] truncate">
+                    Platform Console
+                  </div>
+                  <div className="text-[11px] text-[#6E6A63] truncate">
+                    Super Admin · Users &amp; Plans Control
+                  </div>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-[#D97745] shrink-0" />
+            </button>
+          )}
+        </div>
+
+        {/* In-App PWA Install & Sign Out */}
+        <PWAInstallButton variant="card" showFallbackGuide />
+
+        <button
+          type="button"
+          onClick={() => {
+            setMobileMenuOpen(false);
+            onSignOut();
+          }}
+          className="w-full min-h-[48px] px-4 py-3 bg-white hover:bg-red-50 text-[#6E6A63] hover:text-red-600 border border-[#E6E0D6] rounded-2xl text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+        >
+          <LogOut className="w-4 h-4" />
+          <span>Sign Out</span>
+        </button>
+      </MobileMenuSheet>
     </div>
   );
 };

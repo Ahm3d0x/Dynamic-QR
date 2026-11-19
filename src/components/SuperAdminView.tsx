@@ -3,6 +3,7 @@ import {
   Activity,
   ArrowLeft,
   Check,
+  ChevronRight,
   Crown,
   Edit3,
   ExternalLink,
@@ -10,6 +11,7 @@ import {
   EyeOff,
   LogOut,
   MailPlus,
+  Menu,
   QrCode,
   Search,
   ShieldCheck,
@@ -29,6 +31,7 @@ import {
 import { formatPlanPrice } from '../utils/qrLogic';
 import { BrandLogo } from './BrandLogo';
 import { PWAInstallButton } from './PWAInstallButton';
+import { MobileMenuSheet } from './MobileMenuSheet';
 
 interface SuperAdminViewProps {
   currentUser: UserProfile;
@@ -77,6 +80,12 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
   const [invitePlan, setInvitePlan] = useState<PlanType>('ENTERPRISE');
   const [inviteSuccessMsg, setInviteSuccessMsg] = useState('');
   const [inviteErrorMsg, setInviteErrorMsg] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const handleMobileTabSelect = (tab: 'SUBSCRIBERS' | 'PERMISSIONS' | 'BARCODES' | 'PLANS') => {
+    setActiveTab(tab);
+    setMobileMenuOpen(false);
+  };
 
   const totalScans = useMemo(
     () => barcodes.reduce((sum, b) => sum + b.scanCount, 0),
@@ -221,13 +230,11 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Compact Mobile Top App Bar (56px) */}
-        <header className="lg:hidden sticky top-0 z-30 h-14 px-3.5 bg-[#233229] text-white border-b border-white/10 flex items-center justify-between gap-2">
+        {/* Clean Calm Mobile Top App Bar (56px) */}
+        <header className="lg:hidden sticky top-0 z-30 h-14 px-4 bg-[#233229] text-white border-b border-white/10 flex items-center justify-between gap-2">
           <BrandLogo size="sm" theme="dark" />
 
-          <div className="flex items-center gap-1.5">
-            <PWAInstallButton variant="compact" />
-
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={onSwitchToAdminDashboard}
@@ -238,11 +245,11 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
 
             <button
               type="button"
-              onClick={onSignOut}
-              aria-label="Sign out"
-              className="min-w-[40px] min-h-[40px] flex items-center justify-center bg-white/10 hover:bg-white/15 text-[#E6E0D6] rounded-xl cursor-pointer"
+              onClick={() => setMobileMenuOpen(true)}
+              aria-label="Open super admin mobile menu"
+              className="min-w-[42px] min-h-[42px] flex items-center justify-center bg-white/10 hover:bg-white/15 active:scale-95 text-white rounded-xl transition-transform cursor-pointer"
             >
-              <LogOut className="w-4 h-4" />
+              <Menu className="w-5 h-5" />
             </button>
           </div>
         </header>
@@ -292,53 +299,59 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
 
           {/* A. Platform Overview KPI Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <div className="bg-white border border-[#E6E0D6] rounded-2xl p-5">
-              <div className="w-9 h-9 rounded-xl bg-[#EFECE6] text-[#292824] flex items-center justify-center mb-3">
-                <Users className="w-5 h-5" />
+            <div className="bg-white border border-[#E6E0D6] rounded-2xl p-4 sm:p-5">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#EFECE6] text-[#292824] flex items-center justify-center mb-2.5 sm:mb-3">
+                <Users className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
-              <div className="text-2xl font-bold text-[#292824] font-mono tabular-nums">
+              <div className="text-xl sm:text-2xl font-bold text-[#292824] font-mono tabular-nums">
                 {users.length}
               </div>
-              <div className="text-xs text-[#6E6A63] mt-0.5">
-                Total Users ({activeUsersCount} Active · {suspendedUsersCount} Suspended)
+              <div className="text-[11px] sm:text-xs text-[#6E6A63] mt-0.5 leading-snug">
+                Users · {activeUsersCount} Active · {suspendedUsersCount} Off
               </div>
             </div>
 
-            <div className="bg-white border border-[#E6E0D6] rounded-2xl p-5">
-              <div className="w-9 h-9 rounded-xl bg-[#FDF2EC] text-[#D97745] flex items-center justify-center mb-3">
-                <QrCode className="w-5 h-5" />
+            <div className="bg-white border border-[#E6E0D6] rounded-2xl p-4 sm:p-5">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#FDF2EC] text-[#D97745] flex items-center justify-center mb-2.5 sm:mb-3">
+                <QrCode className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
-              <div className="text-2xl font-bold text-[#292824] font-mono tabular-nums">
+              <div className="text-xl sm:text-2xl font-bold text-[#292824] font-mono tabular-nums">
                 {barcodes.length}
               </div>
-              <div className="text-xs text-[#6E6A63] mt-0.5">Total Platform Codes</div>
+              <div className="text-[11px] sm:text-xs text-[#6E6A63] mt-0.5 leading-snug">
+                Platform Codes
+              </div>
             </div>
 
-            <div className="bg-white border border-[#E6E0D6] rounded-2xl p-5">
-              <div className="w-9 h-9 rounded-xl bg-[#DCE9DD] text-[#2E6B3E] flex items-center justify-center mb-3">
-                <Activity className="w-5 h-5" />
+            <div className="bg-white border border-[#E6E0D6] rounded-2xl p-4 sm:p-5">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#DCE9DD] text-[#2E6B3E] flex items-center justify-center mb-2.5 sm:mb-3">
+                <Activity className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
-              <div className="text-2xl font-bold text-[#292824] font-mono tabular-nums">
+              <div className="text-xl sm:text-2xl font-bold text-[#292824] font-mono tabular-nums">
                 {totalScans.toLocaleString()}
               </div>
-              <div className="text-xs text-[#6E6A63] mt-0.5">Total Platform Scans</div>
+              <div className="text-[11px] sm:text-xs text-[#6E6A63] mt-0.5 leading-snug">
+                Platform Scans
+              </div>
             </div>
 
-            <div className="bg-white border border-[#E6E0D6] rounded-2xl p-5">
-              <div className="w-9 h-9 rounded-xl bg-[#FDF2EC] text-[#D97745] flex items-center justify-center mb-3">
-                <ShieldCheck className="w-5 h-5" />
+            <div className="bg-white border border-[#E6E0D6] rounded-2xl p-4 sm:p-5">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#FDF2EC] text-[#D97745] flex items-center justify-center mb-2.5 sm:mb-3">
+                <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
-              <div className="text-2xl font-bold text-[#292824] font-mono tabular-nums">
+              <div className="text-xl sm:text-2xl font-bold text-[#292824] font-mono tabular-nums">
                 {superAdminsCount}
               </div>
-              <div className="text-xs text-[#6E6A63] mt-0.5">Super Admins</div>
+              <div className="text-[11px] sm:text-xs text-[#6E6A63] mt-0.5 leading-snug">
+                Super Admins
+              </div>
             </div>
           </div>
 
           {/* Section Switcher Tabs */}
           <div className="bg-white border border-[#E6E0D6] rounded-2xl overflow-hidden">
-            <div className="px-6 pt-4 border-b border-[#EFECE6] flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-6 overflow-x-auto">
+            <div className="px-4 sm:px-6 pt-4 border-b border-[#EFECE6] flex flex-col sm:flex-row sm:flex-wrap sm:items-center justify-between gap-3 sm:gap-4">
+              <div className="flex items-center gap-5 sm:gap-6 overflow-x-auto no-scrollbar">
                 <button
                   type="button"
                   onClick={() => setActiveTab('SUBSCRIBERS')}
@@ -348,7 +361,7 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
                       : 'border-transparent text-[#6E6A63] hover:text-[#292824]'
                   }`}
                 >
-                  Subscribers Management
+                  Subscribers
                 </button>
                 <button
                   type="button"
@@ -359,7 +372,7 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
                       : 'border-transparent text-[#6E6A63] hover:text-[#292824]'
                   }`}
                 >
-                  Invite / Grant Admin Access
+                  Admin Invites
                 </button>
                 <button
                   type="button"
@@ -381,34 +394,34 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
                       : 'border-transparent text-[#6E6A63] hover:text-[#292824]'
                   }`}
                 >
-                  Plans & Quota Defaults
+                  Plans &amp; Quotas
                 </button>
               </div>
 
               {activeTab === 'SUBSCRIBERS' && (
-                <div className="relative mb-3">
+                <div className="relative mb-3 w-full sm:w-64">
                   <Search className="w-3.5 h-3.5 text-[#6E6A63] absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
                     aria-label="Search subscribers"
                     value={userSearch}
                     onChange={(e) => setUserSearch(e.target.value)}
-                    placeholder="Search subscriber by name or email..."
-                    className="pl-8 pr-3 py-1.5 bg-[#F8F5EF] border border-[#E6E0D6] rounded-xl text-xs text-[#292824] focus:outline-none focus:border-[#D97745]"
+                    placeholder="Search name or email..."
+                    className="w-full min-h-[40px] pl-8 pr-3 py-1.5 bg-[#F8F5EF] border border-[#E6E0D6] rounded-xl text-xs text-[#292824] focus:outline-none focus:border-[#D97745]"
                   />
                 </div>
               )}
 
               {activeTab === 'BARCODES' && (
-                <div className="relative mb-3">
+                <div className="relative mb-3 w-full sm:w-64">
                   <Search className="w-3.5 h-3.5 text-[#6E6A63] absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
                     aria-label="Search platform barcodes"
                     value={barcodeSearch}
                     onChange={(e) => setBarcodeSearch(e.target.value)}
-                    placeholder="Search by Short Code or owner..."
-                    className="pl-8 pr-3 py-1.5 bg-[#F8F5EF] border border-[#E6E0D6] rounded-xl text-xs text-[#292824] focus:outline-none focus:border-[#D97745]"
+                    placeholder="Search Short Code or owner..."
+                    className="w-full min-h-[40px] pl-8 pr-3 py-1.5 bg-[#F8F5EF] border border-[#E6E0D6] rounded-xl text-xs text-[#292824] focus:outline-none focus:border-[#D97745]"
                   />
                 </div>
               )}
@@ -987,57 +1000,192 @@ export const SuperAdminView: React.FC<SuperAdminViewProps> = ({
         </main>
       </div>
 
-      {/* Mobile Fixed Bottom Thumb Navigation Bar (64px + safe-area) */}
+      {/* Modern Mobile Bottom Dock (64px + safe-area) */}
       <nav
         aria-label="Mobile super admin navigation"
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#E6E0D6] pb-safe"
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#E6E0D6] shadow-[0_-4px_20px_rgba(35,50,41,0.06)] pb-safe"
       >
-        <div className="grid grid-cols-4 items-center h-16 px-1">
-          <button
-            type="button"
-            onClick={() => setActiveTab('SUBSCRIBERS')}
-            className={`flex flex-col items-center justify-center min-h-[48px] gap-1 text-[10px] font-bold transition-colors cursor-pointer ${
-              activeTab === 'SUBSCRIBERS' ? 'text-[#D97745]' : 'text-[#6E6A63]'
-            }`}
-          >
-            <Users className="w-5 h-5" />
-            <span>Users</span>
-          </button>
+        <div className="grid grid-cols-5 items-center h-16 px-1">
+          {(
+            [
+              { key: 'SUBSCRIBERS', label: 'Users', icon: Users },
+              { key: 'PERMISSIONS', label: 'Invites', icon: UserPlus },
+              { key: 'BARCODES', label: 'Codes', icon: QrCode },
+              { key: 'PLANS', label: 'Plans', icon: Sliders },
+            ] as const
+          ).map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.key && !mobileMenuOpen;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setActiveTab(tab.key)}
+                className={`relative flex flex-col items-center justify-center min-h-[52px] gap-1 text-[10px] font-bold transition-colors cursor-pointer ${
+                  isActive ? 'text-[#D97745]' : 'text-[#6E6A63]'
+                }`}
+              >
+                {isActive && (
+                  <span className="absolute top-0 w-7 h-0.5 rounded-full bg-[#D97745]" />
+                )}
+                <span
+                  className={`w-9 h-7 rounded-xl flex items-center justify-center transition-colors ${
+                    isActive ? 'bg-[#FDF2EC]' : ''
+                  }`}
+                >
+                  <Icon className="w-[18px] h-[18px]" />
+                </span>
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
 
           <button
             type="button"
-            onClick={() => setActiveTab('PERMISSIONS')}
-            className={`flex flex-col items-center justify-center min-h-[48px] gap-1 text-[10px] font-bold transition-colors cursor-pointer ${
-              activeTab === 'PERMISSIONS' ? 'text-[#D97745]' : 'text-[#6E6A63]'
+            onClick={() => setMobileMenuOpen(true)}
+            className={`relative flex flex-col items-center justify-center min-h-[52px] gap-1 text-[10px] font-bold transition-colors cursor-pointer ${
+              mobileMenuOpen ? 'text-[#D97745]' : 'text-[#6E6A63]'
             }`}
           >
-            <UserPlus className="w-5 h-5" />
-            <span>Invites</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('BARCODES')}
-            className={`flex flex-col items-center justify-center min-h-[48px] gap-1 text-[10px] font-bold transition-colors cursor-pointer ${
-              activeTab === 'BARCODES' ? 'text-[#D97745]' : 'text-[#6E6A63]'
-            }`}
-          >
-            <QrCode className="w-5 h-5" />
-            <span>Codes</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('PLANS')}
-            className={`flex flex-col items-center justify-center min-h-[48px] gap-1 text-[10px] font-bold transition-colors cursor-pointer ${
-              activeTab === 'PLANS' ? 'text-[#D97745]' : 'text-[#6E6A63]'
-            }`}
-          >
-            <Sliders className="w-5 h-5" />
-            <span>Plans</span>
+            {mobileMenuOpen && (
+              <span className="absolute top-0 w-7 h-0.5 rounded-full bg-[#D97745]" />
+            )}
+            <span
+              className={`w-9 h-7 rounded-xl flex items-center justify-center transition-colors ${
+                mobileMenuOpen ? 'bg-[#FDF2EC]' : ''
+              }`}
+            >
+              <Menu className="w-[18px] h-[18px]" />
+            </span>
+            <span>Menu</span>
           </button>
         </div>
       </nav>
+
+      {/* Modern Super Admin Mobile Menu Sheet */}
+      <MobileMenuSheet
+        isOpen={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
+        headerSlot={<BrandLogo size="sm" theme="light" />}
+      >
+        <div className="bg-[#233229] text-white rounded-2xl p-4 space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-2xl bg-[#D97745] text-white flex items-center justify-center shrink-0">
+              <Crown className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-sm font-bold truncate">Super Admin Console</div>
+              <div className="text-[11px] text-[#E6E0D6]/80 truncate">{currentUser.email}</div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/10 text-center">
+            <div>
+              <div className="text-sm font-bold font-mono tabular-nums">{users.length}</div>
+              <div className="text-[10px] text-[#E6E0D6]/75">Users</div>
+            </div>
+            <div>
+              <div className="text-sm font-bold font-mono tabular-nums">{barcodes.length}</div>
+              <div className="text-[10px] text-[#E6E0D6]/75">Codes</div>
+            </div>
+            <div>
+              <div className="text-sm font-bold font-mono tabular-nums">
+                {totalScans.toLocaleString()}
+              </div>
+              <div className="text-[10px] text-[#E6E0D6]/75">Scans</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white border border-[#E6E0D6] rounded-2xl divide-y divide-[#EFECE6] overflow-hidden">
+          {[
+            {
+              key: 'SUBSCRIBERS' as const,
+              label: 'Subscribers Management',
+              meta: `${users.length} accounts · ${activeUsersCount} active`,
+              icon: Users,
+            },
+            {
+              key: 'PERMISSIONS' as const,
+              label: 'Admin Invites & Access',
+              meta: `${invites.length} pre-authorized`,
+              icon: UserPlus,
+            },
+            {
+              key: 'BARCODES' as const,
+              label: 'All Platform QR Codes',
+              meta: `${barcodes.length} total codes`,
+              icon: QrCode,
+            },
+            {
+              key: 'PLANS' as const,
+              label: 'Plans & Pricing Control',
+              meta: 'Live pricing, quotas & features',
+              icon: Sliders,
+            },
+          ].map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.key;
+            return (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => handleMobileTabSelect(item.key)}
+                className={`w-full min-h-[58px] px-4 py-3 flex items-center justify-between gap-3 text-left transition-colors cursor-pointer ${
+                  isActive ? 'bg-[#FDF2EC]' : 'hover:bg-[#F8F5EF]'
+                }`}
+              >
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <div
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                      isActive ? 'bg-[#D97745] text-white' : 'bg-[#F8F5EF] text-[#292824]'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div
+                      className={`text-sm font-bold truncate ${
+                        isActive ? 'text-[#D97745]' : 'text-[#292824]'
+                      }`}
+                    >
+                      {item.label}
+                    </div>
+                    <div className="text-[11px] text-[#6E6A63] truncate">{item.meta}</div>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[#A49E93] shrink-0" />
+              </button>
+            );
+          })}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            setMobileMenuOpen(false);
+            onSwitchToAdminDashboard();
+          }}
+          className="w-full min-h-[48px] px-4 py-3 bg-[#233229] hover:bg-[#1a261f] text-white rounded-2xl text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4 text-[#D97745]" />
+          <span>Switch to My QR Workspace</span>
+        </button>
+
+        <PWAInstallButton variant="card" showFallbackGuide />
+
+        <button
+          type="button"
+          onClick={() => {
+            setMobileMenuOpen(false);
+            onSignOut();
+          }}
+          className="w-full min-h-[48px] px-4 py-3 bg-white hover:bg-red-50 text-[#6E6A63] hover:text-red-600 border border-[#E6E0D6] rounded-2xl text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+        >
+          <LogOut className="w-4 h-4" />
+          <span>Sign Out</span>
+        </button>
+      </MobileMenuSheet>
     </div>
   );
 };

@@ -3,11 +3,13 @@ import { QRCodeSVG } from 'qrcode.react';
 import {
   ArrowRight,
   Camera,
+  ChevronRight,
   Cloud,
   FileText,
   Globe,
   Image as ImageIcon,
   MapPin,
+  Menu,
   QrCode,
   Search,
   ShieldCheck,
@@ -20,6 +22,7 @@ import { ContentType, PlanType, SubscriptionPlanConfig } from '../types/qr';
 import { formatPlanPrice, normalizeShortCodeInput } from '../utils/qrLogic';
 import { BrandLogo } from './BrandLogo';
 import { PWAInstallButton } from './PWAInstallButton';
+import { MobileMenuSheet } from './MobileMenuSheet';
 
 interface PublicHomeViewProps {
   planCatalog: Record<PlanType, SubscriptionPlanConfig>;
@@ -104,6 +107,17 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
   const [authError, setAuthError] = useState('');
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [billingCycle, setBillingCycle] = useState<'MONTHLY' | 'YEARLY'>('MONTHLY');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const handleMobileSectionJump = (hash: string) => {
+    setMobileMenuOpen(false);
+    setTimeout(() => {
+      const target = document.querySelector(hash);
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 120);
+  };
 
   const visiblePlans = Object.values(planCatalog)
     .filter((p) => p.isVisible)
@@ -168,8 +182,8 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
             </a>
           </nav>
 
-          {/* Zone 3: 1 Primary Action */}
-          <div className="flex items-center shrink-0">
+          {/* Zone 3: Primary Action + Mobile Menu Trigger */}
+          <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={() => setShowSignInModal(true)}
@@ -177,18 +191,33 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
             >
               Sign In
             </button>
+
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(true)}
+              aria-label="Open mobile menu"
+              className="md:hidden min-w-[42px] min-h-[42px] flex items-center justify-center rounded-xl bg-white border border-[#E6E0D6] text-[#292824] hover:border-[#D97745] active:scale-95 transition-transform cursor-pointer"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
           </div>
         </div>
       </header>
 
       {/* Hero Split Section */}
-      <section id="top" className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 sm:pt-12 pb-12 sm:pb-16">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
-          <div className="lg:col-span-7 space-y-5 sm:space-y-6">
-            <p className="text-xs font-semibold text-[#D97745] tracking-wide">
-              Dynamic QR &amp; Smart Link Management · من فكرة الطباعة الثابتة إلى التوجيه السحابي
-            </p>
-            <h1 className="text-3xl sm:text-5xl lg:text-[54px] font-bold tracking-tight text-[#292824] leading-[1.12] text-balance">
+      <section id="top" className="max-w-7xl mx-auto px-4 sm:px-6 pt-7 sm:pt-12 pb-10 sm:pb-16">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-7 lg:gap-10 items-center">
+          <div className="lg:col-span-7 space-y-4 sm:space-y-6">
+            <div className="space-y-0.5">
+              <p className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-[#D97745]">
+                Dynamic QR &amp; Smart Link Management
+              </p>
+              <p className="text-xs font-medium text-[#6E6A63] text-left">
+                <span dir="rtl">من فكرة الطباعة الثابتة إلى التوجيه السحابي الذكي</span>
+              </p>
+            </div>
+
+            <h1 className="text-[30px] sm:text-5xl lg:text-[54px] font-bold tracking-tight text-[#292824] leading-[1.12] text-balance">
               Dynamic QR Codes for a <span className="text-[#D97745]">Smarter</span> World
             </h1>
             <p className="text-sm sm:text-lg text-[#6E6A63] max-w-xl leading-relaxed">
@@ -196,26 +225,29 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
               Built with atomic scan limits, 6 dynamic content engines, and cloud analytics.
             </p>
 
-            <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 pt-1">
+            {/* Mobile-First Balanced CTA Stack: Full-Width Primary + Equal 2-Col Secondary Row */}
+            <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2.5 sm:gap-3 pt-1">
               <button
                 type="button"
                 onClick={() => setShowSignInModal(true)}
-                className="inline-flex items-center justify-center gap-2 px-5 sm:px-6 py-3.5 min-h-[48px] bg-[#D97745] hover:bg-[#c56737] text-white text-sm font-bold rounded-2xl transition-colors cursor-pointer whitespace-nowrap"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 min-h-[50px] bg-[#D97745] hover:bg-[#c56737] text-white text-sm font-bold rounded-2xl transition-colors cursor-pointer whitespace-nowrap shadow-xs"
               >
                 <span>Get Started Free</span>
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-4 h-4 shrink-0" />
               </button>
 
-              <button
-                type="button"
-                onClick={onOpenScanner}
-                className="inline-flex items-center justify-center gap-2 px-5 py-3.5 min-h-[48px] bg-[#233229] hover:bg-[#1a261f] text-white text-sm font-bold rounded-2xl transition-colors cursor-pointer whitespace-nowrap"
-              >
-                <Camera className="w-4 h-4 text-[#D97745]" />
-                <span>QR Scanner</span>
-              </button>
+              <div className="grid grid-cols-2 sm:flex sm:items-center gap-2.5 sm:gap-3">
+                <button
+                  type="button"
+                  onClick={onOpenScanner}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-3.5 min-h-[48px] bg-[#233229] hover:bg-[#1a261f] text-white text-xs sm:text-sm font-bold rounded-2xl transition-colors cursor-pointer whitespace-nowrap"
+                >
+                  <Camera className="w-4 h-4 text-[#D97745] shrink-0" />
+                  <span>QR Scanner</span>
+                </button>
 
-              <PWAInstallButton variant="hero" showFallbackGuide />
+                <PWAInstallButton variant="hero" showFallbackGuide className="w-full sm:w-auto" />
+              </div>
             </div>
 
             {/* Quick Short ID Lookup Bar inside Hero */}
@@ -230,12 +262,12 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
                 aria-label="Lookup QR by Short ID"
                 value={shortIdSearch}
                 onChange={(e) => setShortIdSearch(e.target.value)}
-                placeholder="Lookup Short ID (e.g. QRD-8F3K9A)..."
-                className="flex-1 min-w-0 bg-transparent text-xs font-mono text-[#292824] focus:outline-none px-1.5 py-2"
+                placeholder="Short ID (e.g. QRD-8F3K9A)"
+                className="flex-1 min-w-0 bg-transparent text-xs font-mono text-[#292824] placeholder:text-[#8E897F] focus:outline-none px-1 py-2"
               />
               <button
                 type="submit"
-                className="min-h-[40px] px-3.5 sm:px-4 py-2 bg-[#F8F5EF] hover:bg-[#FDF2EC] text-[#D97745] border border-[#E6E0D6] rounded-xl text-xs font-bold transition-colors cursor-pointer whitespace-nowrap shrink-0"
+                className="min-h-[40px] px-3 sm:px-4 py-2 bg-[#F8F5EF] hover:bg-[#FDF2EC] text-[#D97745] border border-[#E6E0D6] rounded-xl text-xs font-bold transition-colors cursor-pointer whitespace-nowrap shrink-0"
               >
                 Inspect QR
               </button>
@@ -244,60 +276,61 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
 
           {/* Right Hero Visual Card */}
           <div className="lg:col-span-5">
-            <div className="bg-white border border-[#E6E0D6] rounded-3xl p-6 sm:p-8 shadow-sm relative">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <span className="text-xs font-semibold text-[#6E6A63] block">
+            <div className="bg-white border border-[#E6E0D6] rounded-3xl p-5 sm:p-7 shadow-sm relative">
+              <div className="flex items-start justify-between gap-3 mb-5">
+                <div className="min-w-0">
+                  <span className="text-[11px] sm:text-xs font-semibold text-[#6E6A63] block">
                     Static Printed Code
                   </span>
-                  <span className="text-lg font-mono font-bold text-[#292824]">
+                  <span className="text-base sm:text-lg font-mono font-bold text-[#292824] whitespace-nowrap block mt-0.5">
                     /r/QRD-8F3K9A
                   </span>
                 </div>
-                <span className="text-xs font-semibold text-[#2E6B3E]">
-                  Active · 2,140 Scans
+                <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-[#DCE9DD]/70 text-[11px] sm:text-xs font-bold text-[#2E6B3E] whitespace-nowrap shrink-0 mt-0.5">
+                  Active · 2,140
                 </span>
               </div>
 
-              <div className="bg-[#F8F5EF] border border-[#E6E0D6] rounded-2xl p-6 flex flex-col items-center justify-center mb-6">
-                <div className="bg-white p-5 rounded-2xl border-2 border-[#D97745]/30 shadow-xs">
+              <div className="bg-[#F8F5EF] border border-[#E6E0D6] rounded-2xl p-4 sm:p-6 flex flex-col items-center justify-center mb-5">
+                <div className="bg-white p-3.5 sm:p-5 rounded-2xl border-2 border-[#D97745]/30 shadow-xs w-[176px] sm:w-[216px] max-w-full flex items-center justify-center">
                   <QRCodeSVG
-                    value="https://qrdynamic.app/r/QRD-8F3K9A"
+                    value="https://dynamicqr-one.vercel.app/r/QRD-8F3K9A"
                     size={176}
                     fgColor="#292824"
                     bgColor="#FFFFFF"
                     level="H"
+                    className="w-full h-auto max-w-[176px]"
                   />
                 </div>
-                <p className="text-xs text-[#6E6A63] mt-3">
+                <p className="text-[11px] sm:text-xs text-[#6E6A63] mt-3 text-center leading-relaxed">
                   Change destination X → Y in real time without reprinting
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
                 <button
                   type="button"
                   onClick={() => onResolveShortCode('QRD-8F3K9A')}
-                  className="py-2.5 px-4 bg-[#D97745] hover:bg-[#c56737] text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                  className="min-h-[44px] py-2.5 px-3 bg-[#D97745] hover:bg-[#c56737] text-white text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center justify-center text-center leading-tight"
                 >
-                  Test Restaurant Menu
+                  Restaurant Menu
                 </button>
                 <button
                   type="button"
                   onClick={() => onResolveShortCode('QRD-VC4RD1')}
-                  className="py-2.5 px-4 bg-[#F8F5EF] hover:bg-[#EFECE6] text-[#292824] border border-[#E6E0D6] text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                  className="min-h-[44px] py-2.5 px-3 bg-[#F8F5EF] hover:bg-[#EFECE6] text-[#292824] border border-[#E6E0D6] text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center justify-center text-center leading-tight"
                 >
-                  Test Digital vCard
+                  Digital vCard
                 </button>
               </div>
             </div>
           </div>
         </div>
 
-        {/* 4 Feature Strip below Hero */}
+        {/* 4 Feature Strip below Hero — Vertical Card Stack on Mobile, Horizontal on Desktop */}
         <div
           id="architecture"
-          className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-12 pt-8 border-t border-[#E6E0D6]"
+          className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mt-10 sm:mt-12 pt-8 border-t border-[#E6E0D6]"
         >
           {[
             {
@@ -308,31 +341,35 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
             {
               icon: TrendingUp,
               title: 'Real-Time Stats',
-              desc: 'Atomic scan registration & quota enforcement per barcode',
+              desc: 'Atomic scan tracking & quota enforcement per code',
             },
             {
               icon: ShieldCheck,
               title: 'Secure & Reliable',
-              desc: 'Cloud security rules & instant account status synchronization',
+              desc: 'Cloud security rules & instant account status sync',
             },
             {
               icon: Cloud,
               title: 'Cloud Based',
-              desc: 'Powered by Cloud Firestore & Smart Redirect Engine (/r/code)',
+              desc: 'Powered by Firestore & Smart Redirect Engine (/r/code)',
             },
           ].map((feat) => {
             const Icon = feat.icon;
             return (
               <div
                 key={feat.title}
-                className="bg-white border border-[#E6E0D6] rounded-2xl p-5 flex items-start gap-3.5"
+                className="bg-white border border-[#E6E0D6] rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start gap-2.5 sm:gap-3.5 min-w-0 overflow-hidden"
               >
-                <div className="w-10 h-10 rounded-xl bg-[#FDF2EC] text-[#D97745] flex items-center justify-center shrink-0">
-                  <Icon className="w-5 h-5" />
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#FDF2EC] text-[#D97745] flex items-center justify-center shrink-0">
+                  <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
-                <div>
-                  <h3 className="text-sm font-bold text-[#292824]">{feat.title}</h3>
-                  <p className="text-xs text-[#6E6A63] mt-0.5 leading-relaxed">{feat.desc}</p>
+                <div className="min-w-0 w-full">
+                  <h3 className="text-[13px] sm:text-sm font-bold text-[#292824] leading-snug">
+                    {feat.title}
+                  </h3>
+                  <p className="text-[11px] sm:text-xs text-[#6E6A63] mt-1 leading-relaxed break-words">
+                    {feat.desc}
+                  </p>
                 </div>
               </div>
             );
@@ -341,44 +378,51 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
       </section>
 
       {/* Section 2: 6 Dynamic Content Types Showcase */}
-      <section id="content-types" className="max-w-7xl mx-auto px-6 py-14 border-t border-[#E6E0D6]">
-        <div className="text-center max-w-2xl mx-auto mb-10">
-          <p className="text-xs font-semibold text-[#D97745] mb-1">
+      <section
+        id="content-types"
+        className="max-w-7xl mx-auto px-4 sm:px-6 py-10 sm:py-14 border-t border-[#E6E0D6]"
+      >
+        <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-10">
+          <p className="text-xs font-bold text-[#D97745] mb-1">
             01. Six Dynamic Content Engines
           </p>
-          <h2 className="text-3xl font-bold text-[#292824]">
+          <h2 className="text-2xl sm:text-3xl font-bold text-[#292824] text-balance">
             One QR ... Endless Possibilities
           </h2>
-          <p className="text-sm text-[#6E6A63] mt-2">
+          <p className="text-xs sm:text-sm text-[#6E6A63] mt-2 leading-relaxed">
             Every QR code supports external redirects or interactive internal Smart Landing experiences.
-            Click any card below to test its live Smart Landing page.
+            Tap any card below to test its live Smart Landing page.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {SHOWCASE_TYPES.map((card) => {
             const Icon = card.icon;
             return (
               <div
                 key={card.type}
-                className="bg-white border border-[#E6E0D6] rounded-3xl p-6 flex flex-col justify-between hover:border-[#D97745] transition-colors"
+                className="bg-white border border-[#E6E0D6] rounded-3xl p-5 sm:p-6 flex flex-col justify-between gap-4 hover:border-[#D97745] transition-colors"
               >
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-11 h-11 rounded-2xl bg-[#D97745] text-white flex items-center justify-center">
-                        <Icon className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h3 className="text-base font-bold text-[#292824]">{card.title}</h3>
-                        <p className="text-xs text-[#6E6A63]">{card.subtitle}</p>
-                      </div>
+                <div className="space-y-3.5">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-[#D97745] text-white flex items-center justify-center shrink-0">
+                      <Icon className="w-5 h-5" />
                     </div>
-                    <span className="text-xs font-mono text-[#6E6A63]">{card.sampleCode}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <h3 className="text-[15px] sm:text-base font-bold text-[#292824] truncate">
+                          {card.title}
+                        </h3>
+                        <span className="text-[11px] font-mono font-semibold text-[#6E6A63] bg-[#F8F5EF] border border-[#E6E0D6] px-2 py-0.5 rounded-lg whitespace-nowrap shrink-0">
+                          {card.sampleCode}
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#6E6A63] mt-0.5 leading-snug">{card.subtitle}</p>
+                    </div>
                   </div>
 
                   {/* Simulated Mobile Screen Frame inside Card */}
-                  <div className="bg-[#F8F5EF] border border-[#E6E0D6] rounded-2xl p-4 my-3">
+                  <div className="bg-[#F8F5EF] border border-[#E6E0D6] rounded-2xl p-3.5 sm:p-4">
                     <span className="text-[11px] font-mono text-[#6E6A63] block mb-1">
                       Smart Landing Preview
                     </span>
@@ -389,10 +433,10 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
                 <button
                   type="button"
                   onClick={() => onResolveShortCode(card.sampleCode)}
-                  className="mt-3 w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 bg-[#FDF2EC] hover:bg-[#D97745] text-[#D97745] hover:text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                  className="w-full min-h-[44px] inline-flex items-center justify-center gap-2 py-2.5 px-4 bg-[#FDF2EC] hover:bg-[#D97745] text-[#D97745] hover:text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
                 >
                   <span>{card.ctaLabel}</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  <ArrowRight className="w-3.5 h-3.5 shrink-0" />
                 </button>
               </div>
             );
@@ -401,15 +445,18 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
       </section>
 
       {/* Section 3: Subscription Plans & Quotas (Live from Super Admin catalog) */}
-      <section id="pricing" className="max-w-7xl mx-auto px-6 py-14 border-t border-[#E6E0D6]">
-        <div className="text-center max-w-2xl mx-auto mb-8">
-          <p className="text-xs font-semibold text-[#D97745] mb-1">
+      <section
+        id="pricing"
+        className="max-w-7xl mx-auto px-4 sm:px-6 py-10 sm:py-14 border-t border-[#E6E0D6]"
+      >
+        <div className="text-center max-w-2xl mx-auto mb-7 sm:mb-8">
+          <p className="text-xs font-bold text-[#D97745] mb-1">
             02. Transparent Quota Architecture
           </p>
-          <h2 className="text-3xl font-bold text-[#292824]">
-            Subscription Plans & Pricing
+          <h2 className="text-2xl sm:text-3xl font-bold text-[#292824] text-balance">
+            Subscription Plans &amp; Pricing
           </h2>
-          <p className="text-sm text-[#6E6A63] mt-2">
+          <p className="text-xs sm:text-sm text-[#6E6A63] mt-2 leading-relaxed">
             Manage thousands of dynamic QR codes with granular control over scan limits,
             auto-routing timers, and white-label branding.
           </p>
@@ -418,7 +465,7 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
             <button
               type="button"
               onClick={() => setBillingCycle('MONTHLY')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+              className={`min-h-[38px] px-5 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
                 billingCycle === 'MONTHLY'
                   ? 'bg-[#233229] text-white'
                   : 'text-[#6E6A63] hover:text-[#292824]'
@@ -429,7 +476,7 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
             <button
               type="button"
               onClick={() => setBillingCycle('YEARLY')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+              className={`min-h-[38px] px-5 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
                 billingCycle === 'YEARLY'
                   ? 'bg-[#233229] text-white'
                   : 'text-[#6E6A63] hover:text-[#292824]'
@@ -443,7 +490,7 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
         <div
           className={`grid grid-cols-1 sm:grid-cols-2 ${
             visiblePlans.length >= 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'
-          } gap-5`}
+          } gap-4 sm:gap-5`}
         >
           {visiblePlans.map((tier) => {
             const highlighted = tier.isHighlighted;
@@ -451,52 +498,59 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
             return (
               <div
                 key={tier.plan}
-                className={`rounded-3xl p-6 border flex flex-col justify-between ${
+                className={`rounded-3xl p-5 sm:p-6 border flex flex-col justify-between ${
                   highlighted
                     ? 'bg-[#233229] text-white border-[#233229]'
                     : 'bg-white text-[#292824] border-[#E6E0D6]'
                 }`}
               >
                 <div>
-                  <span
-                    className={`text-xs font-bold tracking-wide ${
-                      highlighted ? 'text-[#D97745]' : 'text-[#6E6A63]'
-                    }`}
-                  >
-                    {tier.plan}
-                  </span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      className={`text-xs font-bold tracking-wide ${
+                        highlighted ? 'text-[#D97745]' : 'text-[#6E6A63]'
+                      }`}
+                    >
+                      {tier.plan}
+                    </span>
+                    {highlighted && (
+                      <span className="text-[11px] font-bold text-[#D97745] bg-[#D97745]/15 px-2.5 py-0.5 rounded-lg">
+                        Popular
+                      </span>
+                    )}
+                  </div>
                   <h3 className="text-xl font-bold mt-1">{tier.label}</h3>
                   <p
-                    className={`text-xs mt-1 ${
+                    className={`text-xs mt-1 leading-relaxed ${
                       highlighted ? 'text-[#E6E0D6]' : 'text-[#6E6A63]'
                     }`}
                   >
                     {tier.tagline}
                   </p>
 
-                  <div className="mt-4 pt-4 border-t border-current/10 flex items-baseline gap-1.5">
+                  <div className="mt-4 pt-4 border-t border-current/10 flex flex-wrap items-baseline gap-1.5">
                     <span className="text-3xl font-bold font-mono tabular-nums">
                       {price.amountText}
                     </span>
-                    <span className="text-xs opacity-75">{price.suffix}</span>
+                    <span className="text-xs opacity-75 whitespace-nowrap">{price.suffix}</span>
                   </div>
 
                   <div className="my-5 pt-4 border-t border-current/10 space-y-2.5 text-xs">
-                    <div className="flex justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <span className="opacity-75">Dynamic QR Codes</span>
-                      <span className="font-mono font-bold tabular-nums">
+                      <span className="font-mono font-bold tabular-nums whitespace-nowrap">
                         {tier.maxBarcodes.toLocaleString()}
                       </span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <span className="opacity-75">Scans per Code</span>
-                      <span className="font-mono font-bold tabular-nums">
+                      <span className="font-mono font-bold tabular-nums whitespace-nowrap">
                         {tier.maxScansPerBarcode.toLocaleString()}
                       </span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <span className="opacity-75">Auto-Redirect</span>
-                      <span className="font-mono font-bold tabular-nums">
+                      <span className="font-mono font-bold tabular-nums whitespace-nowrap">
                         {tier.allowDirectRedirect
                           ? tier.defaultRedirectDelaySeconds === 0
                             ? 'Instant (0–30s)'
@@ -504,9 +558,9 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
                           : `Fixed ${tier.defaultRedirectDelaySeconds}s`}
                       </span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <span className="opacity-75">Hide Branding</span>
-                      <span className="font-bold">
+                      <span className="font-bold whitespace-nowrap">
                         {tier.allowWhiteLabel ? 'White-Label' : 'Standard'}
                       </span>
                     </div>
@@ -516,7 +570,7 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowSignInModal(true)}
-                  className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+                  className={`w-full min-h-[46px] py-2.5 px-4 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
                     highlighted
                       ? 'bg-[#D97745] hover:bg-[#c56737] text-white'
                       : 'bg-[#F8F5EF] hover:bg-[#EFECE6] text-[#292824] border border-[#E6E0D6]'
@@ -610,6 +664,90 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
           </div>
         </div>
       )}
+      {/* Modern Mobile Navigation Menu Sheet */}
+      <MobileMenuSheet
+        isOpen={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
+        headerSlot={<BrandLogo size="sm" theme="light" />}
+      >
+        <div className="bg-white border border-[#E6E0D6] rounded-2xl divide-y divide-[#EFECE6] overflow-hidden">
+          {[
+            {
+              hash: '#content-types',
+              title: 'Content Types',
+              subtitle: 'URL, Menu, vCard, WiFi, Text & Geo',
+              icon: QrCode,
+            },
+            {
+              hash: '#architecture',
+              title: 'How It Works',
+              subtitle: 'Static print to real-time cloud redirect',
+              icon: Zap,
+            },
+            {
+              hash: '#lookup',
+              title: 'QR Lookup',
+              subtitle: 'Inspect any Short ID instantly',
+              icon: Search,
+            },
+            {
+              hash: '#pricing',
+              title: 'Plans & Pricing',
+              subtitle: 'Compare limits, timers & white-label',
+              icon: TrendingUp,
+            },
+          ].map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.hash}
+                type="button"
+                onClick={() => handleMobileSectionJump(item.hash)}
+                className="w-full min-h-[60px] px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-[#F8F5EF] active:bg-[#FDF2EC] transition-colors cursor-pointer"
+              >
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-[#FDF2EC] text-[#D97745] flex items-center justify-center shrink-0">
+                    <Icon className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-bold text-[#292824] truncate">{item.title}</div>
+                    <div className="text-xs text-[#6E6A63] truncate">{item.subtitle}</div>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[#A49E93] shrink-0" />
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="grid grid-cols-2 gap-2.5">
+          <button
+            type="button"
+            onClick={() => {
+              setMobileMenuOpen(false);
+              onOpenScanner();
+            }}
+            className="min-h-[52px] px-4 py-3 bg-[#233229] hover:bg-[#1a261f] text-white rounded-2xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <Camera className="w-4 h-4 text-[#D97745]" />
+            <span>QR Scanner</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setMobileMenuOpen(false);
+              setShowSignInModal(true);
+            }}
+            className="min-h-[52px] px-4 py-3 bg-[#D97745] hover:bg-[#c56737] text-white rounded-2xl text-xs font-bold flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <span>Sign In</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        <PWAInstallButton variant="card" showFallbackGuide />
+      </MobileMenuSheet>
     </div>
   );
 };

@@ -200,14 +200,6 @@ export const PublicHomeView: React.FC<PublicHomeViewProps> = ({
 
               <button
                 type="button"
-                onClick={() => onEnterDemoWorkspace('SUPER_ADMIN')}
-                className="inline-flex items-center gap-2 px-5 py-3.5 bg-white hover:bg-[#EFECE6] text-[#292824] border border-[#E6E0D6] text-sm font-bold rounded-2xl transition-colors cursor-pointer whitespace-nowrap"
-              >
-                <span>Super Admin Console</span>
-              </button>
-
-              <button
-                type="button"
                 onClick={onOpenScanner}
                 className="inline-flex items-center gap-2 px-5 py-3.5 bg-[#233229] hover:bg-[#1a261f] text-white text-sm font-bold rounded-2xl transition-colors cursor-pointer whitespace-nowrap"
               >
